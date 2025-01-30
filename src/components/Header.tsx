@@ -1,8 +1,8 @@
-import Link from 'next/link'
-import { Cpu } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
-import { ThemeToggle } from './ThemeToggle'
-import LanguageSelector from './LanguageSelector'
+import Link from 'next/link';
+import { Cpu } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { ThemeToggle } from './ThemeToggle';
+//import LanguageSelector from './LanguageSelector'
 
 interface HeaderProps {
   onOpenPanel: () => void;
@@ -21,15 +21,15 @@ export default function Header({ onOpenPanel }: HeaderProps) {
 
       {/* Middle section */}
       <div className="flex items-center">
-        <a 
+        <a
           href="https://discord.com/invite/osmu"
           target="_blank"
           rel="noopener noreferrer"
           className="hover:opacity-90 transition-opacity"
         >
-          <img 
-            src="https://dcbadge.limes.pink/api/server/3E8ca2dkcC" 
-            alt="Discord Server" 
+          <img
+            src="https://dcbadge.limes.pink/api/server/3E8ca2dkcC"
+            alt="Discord Server"
             className="h-6"
           />
         </a>
@@ -46,9 +46,9 @@ export default function Header({ onOpenPanel }: HeaderProps) {
         >
           {t('hero.getStarted')}
         </button>
-        <LanguageSelector />
+        {/* <LanguageSelector /> */}
         <ThemeToggle />
       </nav>
     </header>
-  )
+  );
 }
