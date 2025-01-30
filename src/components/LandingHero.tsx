@@ -7,6 +7,7 @@ import { ESPLoader, Transport } from 'esptool-js';
 import { useTranslation } from 'react-i18next';
 import Header from './Header';
 import InstructionPanel from './InstructionPanel';
+import DeviceModal from './DeviceModal';
 import Selector from './Selector';
 import device_data from './firmware_data.json';
 
@@ -24,6 +25,7 @@ export default function LandingHero() {
   const [isFlashing, setIsFlashing] = useState(false);
   const [isLogging, setIsLogging] = useState(false);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isChromiumBased, setIsChromiumBased] = useState(true);
   const serialPortRef = useRef<any>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -62,6 +64,10 @@ export default function LandingHero() {
       }
     };
   }, [isLogging, t]);
+
+  const openModal = () => {
+    setIsModalOpen(true);
+  };
 
   const devices = device_data.devices;
   const device =
@@ -354,6 +360,7 @@ export default function LandingHero() {
                   }}
                   disabled={isConnecting || isFlashing || !isConnected}
                 />
+                <Button onClick={openModal}>{t('hero.selectDevice')}</Button>
               </div>
               <div className="w-full lg:basis-1/3">
                 <Cpu className="h-48 w-48 mb-4 m-auto" color="#FFB000" strokeWidth={1} />
@@ -421,6 +428,7 @@ export default function LandingHero() {
         </div>
       </section>
       <InstructionPanel isOpen={isPanelOpen} onClose={() => setIsPanelOpen(false)} />
+      <DeviceModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </>
   );
 }
