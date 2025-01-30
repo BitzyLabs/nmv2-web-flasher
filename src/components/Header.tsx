@@ -15,12 +15,12 @@ export default function Header({ onOpenPanel }: HeaderProps) {
     <header className="px-4 lg:px-6 h-14 flex items-center justify-between">
       {/* Left section */}
       <Link className="flex items-center justify-center" href="#">
-        <Cpu className="h-6 w-6 mr-2" />
-        <span className="font-bold">Bitaxe Web Flasher</span>
+        <img src="../../pictures/bitronics-logo.svg" alt="Bitroics logo" style={{ width: '50%' }} />
+        <span className="font-bold align-sub">Web Flasher</span>
       </Link>
 
       {/* Middle section */}
-      <div className="flex items-center">
+      {/* <div className="flex items-center">
         <a
           href="https://discord.com/invite/osmu"
           target="_blank"
@@ -33,7 +33,7 @@ export default function Header({ onOpenPanel }: HeaderProps) {
             className="h-6"
           />
         </a>
-      </div>
+      </div> */}
 
       {/* Right section */}
       <nav className="flex items-center gap-4 sm:gap-6">
