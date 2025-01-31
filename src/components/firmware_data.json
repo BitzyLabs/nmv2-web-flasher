@@ -2,6 +2,7 @@
   "devices": [
     {
       "name": "Max",
+      "picture": "../../pictures/placeholderImg.png",
       "boards": [
         {
           "name": "102",
@@ -20,6 +21,7 @@
     },
     {
       "name": "Ultra",
+      "picture": "../../pictures/placeholderImg.png",
       "boards": [
         {
           "name": "201",
@@ -90,6 +92,7 @@
     },
     {
       "name": "Supra",
+      "picture": "../../pictures/placeholderImg.png",
       "boards": [
         {
           "name": "401",
@@ -134,6 +137,7 @@
     },
     {
       "name": "Gamma",
+      "picture": "../../pictures/placeholderImg.png",
       "boards": [
         {
           "name": "601",
@@ -152,6 +156,7 @@
     },
     {
       "name": "UltraHex",
+      "picture": "../../pictures/placeholderImg.png",
       "boards": [
         {
           "name": "302",
@@ -175,6 +180,7 @@
     },
     {
       "name": "NerdMiner",
+      "picture": "../../pictures/placeholderImg.png",
       "boards": [
         {
           "name": "100",
@@ -189,6 +195,7 @@
     },
     {
       "name": "NerdNOS",
+      "picture": "../../pictures/placeholderImg.png",
       "boards": [
         {
           "name": "100",

@@ -72,5 +72,9 @@
       "title": "Browser Compatibility Error",
       "description": "This application requires a Chromium-based browser (such as Google Chrome, Microsoft Edge, or Brave) to function properly. Please switch to a compatible browser and try again."
     }
+  },
+
+  "devicesModal": {
+    "title": "Select your device"
   }
 }

@@ -1,14 +1,16 @@
 import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import device_data from './firmware_data.json';
 
 interface DeviceModalProps {
   isOpen: boolean;
   onClose: () => void;
+  selectDevice: (name: string) => any;
 }
 
-export default function DeviceModal({ isOpen, onClose }: DeviceModalProps) {
+export default function DeviceModal({ isOpen, onClose, selectDevice }: DeviceModalProps) {
   const { t } = useTranslation();
-  const steps = [1, 2, 3, 4, 5, 6, 7];
+  const devices = device_data.devices;
 
   return (
     <div
@@ -22,37 +24,21 @@ export default function DeviceModal({ isOpen, onClose }: DeviceModalProps) {
       >
         <X className="h-6 w-6" />
       </button>
-      <h2 className="text-xl font-bold mb-4">{t('instructions.title')}</h2>
-      <ol className="list-decimal list-inside space-y-2 text-sm">
-        {steps.map((step) => (
-          <li key={step}>{t(`instructions.steps.${step}`)}</li>
+      <h2 className="text-xl font-bold mb-4">{t('devicesModal.title')}</h2>
+      <div className="flex flex-wrap gap-8 justify-center p-6">
+        {devices.map((d) => (
+          <div
+            key={d.name}
+            className="lg:max-w-xs"
+            onClick={() => {
+              selectDevice(d.name);
+            }}
+          >
+            <img src={d.picture} alt={d.name} />
+            <div>{d.name}</div>
+          </div>
         ))}
-      </ol>
-      <ol className="list-decimal list-inside space-y-2 text-sm">
-        {steps.map((step) => (
-          <li key={step}>{t(`instructions.steps.${step}`)}</li>
-        ))}
-      </ol>
-      <ol className="list-decimal list-inside space-y-2 text-sm">
-        {steps.map((step) => (
-          <li key={step}>{t(`instructions.steps.${step}`)}</li>
-        ))}
-      </ol>
-      <ol className="list-decimal list-inside space-y-2 text-sm">
-        {steps.map((step) => (
-          <li key={step}>{t(`instructions.steps.${step}`)}</li>
-        ))}
-      </ol>
-      <ol className="list-decimal list-inside space-y-2 text-sm">
-        {steps.map((step) => (
-          <li key={step}>{t(`instructions.steps.${step}`)}</li>
-        ))}
-      </ol>
-      <ol className="list-decimal list-inside space-y-2 text-sm">
-        {steps.map((step) => (
-          <li key={step}>{t(`instructions.steps.${step}`)}</li>
-        ))}
-      </ol>
+      </div>
     </div>
   );
 }

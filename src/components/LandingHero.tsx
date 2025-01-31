@@ -65,10 +65,6 @@ export default function LandingHero() {
     };
   }, [isLogging, t]);
 
-  const openModal = () => {
-    setIsModalOpen(true);
-  };
-
   const devices = device_data.devices;
   const device =
     selectedDevice !== '' ? devices.find((d) => d.name == selectedDevice)! : { boards: [] };
@@ -310,6 +306,17 @@ export default function LandingHero() {
     }
   };
 
+  const openModal = () => {
+    setIsModalOpen(true);
+  };
+
+  const selectDevice = (name: string) => {
+    setSelectedDevice(name);
+    setSelectedBoardVersion('');
+    setSelectedFirmware('');
+    setIsModalOpen(false);
+  };
+
   if (!isChromiumBased) {
     return (
       <div className="container px-4 md:px-6 py-12 text-center">
@@ -350,7 +357,7 @@ export default function LandingHero() {
             <div className="container  flex flex-col justify-center gap-8 lg:flex-row  lg:gap-8">
               <div className="w-full lg:basis-1/3 ">
                 <RadioReceiver className="h-48 w-48 mb-4 m-auto" color="#FFB000" strokeWidth={1} />
-                <Selector
+                {/* <Selector
                   placeholder={t('hero.selectDevice')}
                   values={devices.map((d) => d.name)}
                   onValueChange={(value) => {
@@ -359,8 +366,10 @@ export default function LandingHero() {
                     setSelectedFirmware('');
                   }}
                   disabled={isConnecting || isFlashing || !isConnected}
-                />
-                <Button onClick={openModal}>{t('hero.selectDevice')}</Button>
+                /> */}
+                <Button onClick={openModal} disabled={isConnecting || isFlashing || !isConnected}>
+                  {t('hero.selectDevice')}
+                </Button>
               </div>
               <div className="w-full lg:basis-1/3">
                 <Cpu className="h-48 w-48 mb-4 m-auto" color="#FFB000" strokeWidth={1} />
@@ -428,7 +437,11 @@ export default function LandingHero() {
         </div>
       </section>
       <InstructionPanel isOpen={isPanelOpen} onClose={() => setIsPanelOpen(false)} />
-      <DeviceModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <DeviceModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        selectDevice={(name: string) => selectDevice(name)}
+      />
     </>
   );
 }
