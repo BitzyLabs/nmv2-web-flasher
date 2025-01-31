@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import { Cpu } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from 'next-themes';
 import { ThemeToggle } from './ThemeToggle';
 //import LanguageSelector from './LanguageSelector'
 
@@ -10,13 +10,22 @@ interface HeaderProps {
 
 export default function Header({ onOpenPanel }: HeaderProps) {
   const { t } = useTranslation();
+  const { theme, setTheme } = useTheme();
 
   return (
     <header className="px-4 lg:px-6 h-14 flex items-center justify-between">
       {/* Left section */}
-      <Link className="flex items-center justify-center" href="#">
-        <img src="../../pictures/bitronics-logo.svg" alt="Bitroics logo" style={{ width: '50%' }} />
-        <span className="font-bold align-sub">Web Flasher</span>
+      <Link className="flex items-baseline " href="#">
+        <img
+          src={
+            theme === 'dark'
+              ? '../../pictures/bitronics-logo-dark.svg'
+              : '../../pictures/bitronics-logo-light.svg'
+          }
+          alt="Bitroics logo"
+          style={{ width: '50%' }}
+        />{' '}
+        <span className="font-bold">Web Flasher</span>
       </Link>
 
       {/* Middle section */}
