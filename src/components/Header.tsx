@@ -46,15 +46,23 @@ export default function Header({ onOpenPanel }: HeaderProps) {
 
       {/* Right section */}
       <nav className="flex items-center gap-4 sm:gap-6">
-        <Link className="text-sm font-medium hover:underline underline-offset-4" href="#features">
-          {t('header.features')}
-        </Link>
         <button
           className="text-sm font-medium hover:underline underline-offset-4"
           onClick={onOpenPanel}
         >
           {t('hero.getStarted')}
         </button>
+        <Link className="text-sm font-medium hover:underline underline-offset-4" href="#features">
+          {t('header.features')}
+        </Link>
+        <Link
+          className="text-sm font-medium hover:underline underline-offset-4"
+          href="https://bitronics.store/nerdminer/"
+          target="__blank"
+        >
+          {t('header.shop')}
+        </Link>
+
         {/* <LanguageSelector /> */}
         <ThemeToggle />
       </nav>
