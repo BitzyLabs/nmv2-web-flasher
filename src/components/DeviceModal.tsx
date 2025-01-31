@@ -34,8 +34,8 @@ export default function DeviceModal({ isOpen, onClose, selectDevice }: DeviceMod
               selectDevice(d.name);
             }}
           >
-            <img src={d.picture} alt={d.name} />
-            <div>{d.name}</div>
+            <img className="mb-2" src={d.picture} alt={d.name} />
+            <div className="mb-4 w-full text-center">{d.name}</div>
           </div>
         ))}
       </div>
