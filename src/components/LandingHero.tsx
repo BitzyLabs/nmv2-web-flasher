@@ -115,6 +115,9 @@ export default function LandingHero() {
       serialPortRef.current = null;
       setIsConnected(false);
       setStatus('');
+      setSelectedDevice('');
+      setSelectedBoardVersion('');
+      setSelectedFirmware('');
     } catch (error) {
       console.error('Disconnect error:', error);
       setStatus(
@@ -354,25 +357,23 @@ export default function LandingHero() {
                 <Usb className="ml-2 h-4 w-4" />
               </Button>
             </div>
-            <div className="container  flex flex-col justify-center gap-8 lg:flex-row  lg:gap-8">
-              <div className="w-full lg:basis-1/3 ">
-                <RadioReceiver className="h-48 w-48 mb-4 m-auto" color="#FFB000" strokeWidth={1} />
-                {/* <Selector
-                  placeholder={t('hero.selectDevice')}
-                  values={devices.map((d) => d.name)}
-                  onValueChange={(value) => {
-                    setSelectedDevice(value);
-                    setSelectedBoardVersion('');
-                    setSelectedFirmware('');
-                  }}
-                  disabled={isConnecting || isFlashing || !isConnected}
-                /> */}
+            <div className="flex flex-col justify-between items-center w-3/4 gap-y-20 md:flex-row">
+              <div className="flex flex-col justify-center w-52">
+                <RadioReceiver
+                  className="h-24 w-24 md:h-32 md:w-32 lg:h-48 lg:w-48 lg:h-48 lg:w-48 mb-4 m-auto"
+                  color="#FFB000"
+                  strokeWidth={1}
+                />
                 <Button onClick={openModal} disabled={isConnecting || isFlashing || !isConnected}>
-                  {t('hero.selectDevice')}
+                  {selectedDevice === '' ? t('hero.selectDevice') : selectedDevice}
                 </Button>
               </div>
-              <div className="w-full lg:basis-1/3">
-                <Cpu className="h-48 w-48 mb-4 m-auto" color="#FFB000" strokeWidth={1} />
+              <div className="flex flex-col justify-center w-52">
+                <Cpu
+                  className="h-24 w-24 md:h-32 md:w-32 lg:h-48 lg:w-48 mb-4 m-auto"
+                  color="#FFB000"
+                  strokeWidth={1}
+                />
                 <Selector
                   placeholder={t('hero.selectBoard')}
                   values={device.boards.map((b) => b.name)}
@@ -380,16 +381,20 @@ export default function LandingHero() {
                     setSelectedBoardVersion(value);
                     setSelectedFirmware('');
                   }}
-                  disabled={isConnecting || isFlashing}
+                  disabled={isConnecting || isFlashing || selectedDevice === ''}
                 />
               </div>
-              <div className="w-full lg:basis-1/3">
-                <GitCompareIcon className="h-48 w-48 mb-4 m-auto" color="#FFB000" strokeWidth={1} />
+              <div className="flex flex-col justify-center w-52">
+                <GitCompareIcon
+                  className="h-24 w-24 md:h-32 md:w-32 lg:h-48 lg:w-48 mb-4 m-auto"
+                  color="#FFB000"
+                  strokeWidth={1}
+                />
                 <Selector
                   placeholder={t('hero.selectFirmware')}
                   values={board.supported_firmware.map((f) => f.version)}
                   onValueChange={setSelectedFirmware}
-                  disabled={isConnecting || isFlashing}
+                  disabled={isConnecting || isFlashing || selectedBoardVersion === ''}
                 />
               </div>
             </div>

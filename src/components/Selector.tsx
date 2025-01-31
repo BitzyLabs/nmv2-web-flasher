@@ -1,13 +1,24 @@
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 type SelectorProps = {
   onValueChange: (value: string) => void;
   disabled?: boolean;
   values?: string[];
   placeholder?: string;
-}
+};
 
-export default function BoardVersionSelector({ onValueChange, disabled, placeholder = '', values = [] }: SelectorProps) {
+export default function BoardVersionSelector({
+  onValueChange,
+  disabled,
+  placeholder = '',
+  values = [],
+}: SelectorProps) {
   return (
     <Select onValueChange={onValueChange} disabled={disabled}>
       <SelectTrigger>
@@ -21,5 +32,5 @@ export default function BoardVersionSelector({ onValueChange, disabled, placehol
         ))}
       </SelectContent>
     </Select>
-  )
+  );
 }
