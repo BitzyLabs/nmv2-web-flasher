@@ -29,7 +29,7 @@ export default function DeviceModal({ isOpen, onClose, selectDevice }: DeviceMod
         {devices.map((d) => (
           <div
             key={d.name}
-            className="lg:max-w-xs"
+            className="max-w-1/3 md:max-w-1/4"
             onClick={() => {
               selectDevice(d.name);
             }}
