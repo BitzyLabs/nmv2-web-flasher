@@ -13,7 +13,7 @@ export default function Header({ onOpenPanel }: HeaderProps) {
   const { theme, setTheme } = useTheme();
 
   return (
-    <header className="px-4 lg:px-6 h-14 flex items-center justify-between">
+    <header className="px-4 lg:px-6 h-14 flex items-center justify-between text-bitronics">
       {/* Left section */}
       <Link className="flex items-baseline " href="#">
         <img

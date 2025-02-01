@@ -5,6 +5,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
+  --color-bitronics: hsl(41 100% 50%);
+
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
@@ -124,10 +126,12 @@
     --background: 0 84% 4.9%;
     --foreground: 210 40% 98%;
 
-    --card: 222.2 84% 4.9%;
+    /* --card: 222.2 84% 4.9%; */
+    --card: 0 84% 4.9%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222.2 84% 4.9%;
+    /* --popover: 222.2 84% 4.9%; */
+    --popover: 0 84% 4.9%%;
     --popover-foreground: 210 40% 98%;
 
     --primary: 210 40% 98%;

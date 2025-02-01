@@ -14,7 +14,7 @@ export default function DeviceModal({ isOpen, onClose, selectDevice }: DeviceMod
 
   return (
     <div
-      className={`fixed top-[5vh] left-0 max-h-[85vh] w-full lg:w-5/6 px-4 overflow-scroll bg-white dark:bg-gray-800 p-4 shadow-lg transform ${
+      className={`text-bitronics fixed top-[5vh] left-0 max-h-[85vh] w-full lg:w-5/6 px-4 overflow-scroll bg-white dark:bg-gray-800 p-4 shadow-lg transform ${
         isOpen ? 'lg:translate-x-[10%]' : '-translate-x-full'
       } transition-transform duration-300 ease-in-out rounded-lg`}
     >
