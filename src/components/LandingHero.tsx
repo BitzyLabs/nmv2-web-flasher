@@ -14,6 +14,8 @@ import device_data from './firmware_data.json';
 import { Terminal } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
 
+const basePath = process.env.NODE_ENV === 'production' ? '/bitronics-web-flasher' : '';
+
 export default function LandingHero() {
   const { t } = useTranslation();
   const [selectedDevice, setSelectedDevice] = useState<string>('');
@@ -45,7 +47,7 @@ export default function LandingHero() {
       
       for (const version of versions) {
         try {
-          const manifestResponse = await fetch(`firmware/nerdminer/${version}/manifest.json`);
+          const manifestResponse = await fetch(`${basePath}/firmware/nerdminer/${version}/manifest.json`);
           if (!manifestResponse.ok) {
             console.warn(`Manifest not found for ${version}`);
             continue;
@@ -73,7 +75,7 @@ export default function LandingHero() {
               // Add this version to the board's supported firmware
               allBoards.get(displayName).supported_firmware.push({
                 version: version,
-                path: `firmware/nerdminer/${version}/${boardName}_factory.bin`
+                path: `${basePath}/firmware/nerdminer/${version}/${boardName}_factory.bin`
               });
             }
           }
@@ -349,11 +351,11 @@ export default function LandingHero() {
         
         if (keepConfiguration) {
           // Use firmware-only file and flash to 0x10000
-          firmwarePath = `firmware/nerdminer/${version}/${boardName}_firmware.bin`;
+          firmwarePath = `${basePath}/firmware/nerdminer/${version}/${boardName}_firmware.bin`;
           flashAddress = 0x10000;
         } else {
           // Use factory file and flash to 0x0000
-          firmwarePath = `firmware/nerdminer/${version}/${boardName}_factory.bin`;
+          firmwarePath = `${basePath}/firmware/nerdminer/${version}/${boardName}_factory.bin`;
           flashAddress = 0x0000;
         }
       } else {
@@ -472,7 +474,7 @@ export default function LandingHero() {
                   />
                 ) : (
                   <img
-                    src={devices.find(d => d.name === selectedDevice)?.picture}
+                    src={`${basePath}${devices.find(d => d.name === selectedDevice)?.picture}`}
                     alt={selectedDevice}
                     className="h-25 w-25 md:h-29 md:w-29 lg:h-37 lg:w-37 mb-4 m-auto object-contain rounded-lg"
                   />
