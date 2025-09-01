@@ -474,7 +474,7 @@ export default function LandingHero() {
                   />
                 ) : (
                   <img
-                    src={`${basePath}${devices.find(d => d.name === selectedDevice)?.picture}`}
+                    src={`${basePath}/${devices.find(d => d.name === selectedDevice)?.picture}`}
                     alt={selectedDevice}
                     className="h-25 w-25 md:h-29 md:w-29 lg:h-37 lg:w-37 mb-4 m-auto object-contain rounded-lg"
                   />

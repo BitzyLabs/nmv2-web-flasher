@@ -2,12 +2,12 @@
   "devices": [
     {
       "name": "Nerdminer",
-      "picture": "/pictures/nerdminer.png",
+      "picture": "pictures/nerdminer.png",
       "boards": []
     },
     {
       "name": "Bitaxe",
-      "picture": "/pictures/bitaxe.png",
+      "picture": "pictures/bitaxe.png",
       "boards": [
         {
           "name": "Supra 401",
