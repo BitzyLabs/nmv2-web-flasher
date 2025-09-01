@@ -2,6 +2,30 @@
 
 @plugin 'tailwindcss-animate';
 
+/* Custom scrollbar styles for select components */
+[data-radix-select-viewport] {
+  scrollbar-width: thin;
+  scrollbar-color: #9CA3AF #E5E7EB;
+}
+
+[data-radix-select-viewport]::-webkit-scrollbar {
+  width: 8px;
+}
+
+[data-radix-select-viewport]::-webkit-scrollbar-track {
+  background: #E5E7EB;
+  border-radius: 4px;
+}
+
+[data-radix-select-viewport]::-webkit-scrollbar-thumb {
+  background: #9CA3AF;
+  border-radius: 4px;
+}
+
+[data-radix-select-viewport]::-webkit-scrollbar-thumb:hover {
+  background: #6B7280;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme {

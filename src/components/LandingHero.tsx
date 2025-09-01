@@ -28,6 +28,7 @@ export default function LandingHero() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isChromiumBased, setIsChromiumBased] = useState(true);
   const [keepConfiguration, setKeepConfiguration] = useState(false);
+  const [nerdminerBoards, setNerdminerBoards] = useState<any[]>([]);
   const serialPortRef = useRef<any>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const terminalContainerRef = useRef<HTMLDivElement>(null);
@@ -36,10 +37,72 @@ export default function LandingHero() {
   const readableStreamClosedRef = useRef<Promise<void> | null>(null);
   const logsRef = useRef<string>('');
 
+  // Function to load all Nerdminer boards from manifests
+  const loadNerdminerBoards = async () => {
+    try {
+      const versions = ['v1.7.0', 'v1.6.3'];
+      const allBoards = new Map<string, any>();
+      
+      for (const version of versions) {
+        try {
+          const manifestResponse = await fetch(`firmware/nerdminer/${version}/manifest.json`);
+          if (!manifestResponse.ok) {
+            console.warn(`Manifest not found for ${version}`);
+            continue;
+          }
+          
+          const manifest = await manifestResponse.json();
+          console.log(`Manifest for ${version}:`, manifest);
+          
+          if (manifest.boards && Array.isArray(manifest.boards)) {
+            for (const boardName of manifest.boards) {
+              let displayName = boardName;
+              
+              // Special case for the original board - make it first
+              if (boardName.toUpperCase() === 'NERDMINERV2') {
+                displayName = 'NERDMINERV2 ORIGINAL BOARD (TDISPLAY-S3)';
+              }
+              
+              if (!allBoards.has(displayName)) {
+                allBoards.set(displayName, {
+                  name: displayName,
+                  supported_firmware: []
+                });
+              }
+              
+              // Add this version to the board's supported firmware
+              allBoards.get(displayName).supported_firmware.push({
+                version: version,
+                path: `firmware/nerdminer/${version}/${boardName}_factory.bin`
+              });
+            }
+          }
+        } catch (error) {
+          console.error(`Error loading manifest for ${version}:`, error);
+        }
+      }
+      
+      // Convert Map to Array and sort: Original board first, then alphabetical
+      const boardsArray = Array.from(allBoards.values()).sort((a, b) => {
+        if (a.name === 'NERDMINERV2 ORIGINAL BOARD (TDISPLAY-S3)') return -1;
+        if (b.name === 'NERDMINERV2 ORIGINAL BOARD (TDISPLAY-S3)') return 1;
+        return a.name.localeCompare(b.name);
+      });
+      
+      console.log('All loaded boards:', boardsArray);
+      setNerdminerBoards(boardsArray);
+    } catch (error) {
+      console.error('Error loading Nerdminer boards:', error);
+    }
+  };
+
   useEffect(() => {
     const userAgent = navigator.userAgent.toLowerCase();
     const isChromium = /chrome|chromium|crios|edge/i.test(userAgent);
     setIsChromiumBased(isChromium);
+    
+    // Load Nerdminer boards dynamically
+    loadNerdminerBoards();
   }, []);
 
   useEffect(() => {
@@ -67,8 +130,23 @@ export default function LandingHero() {
   }, [isLogging, t]);
 
   const devices = device_data.devices;
-  const device =
-    selectedDevice !== '' ? devices.find((d) => d.name == selectedDevice)! : { boards: [] };
+  
+  // Get device data with dynamic support for Nerdminer
+  const getDeviceData = () => {
+    if (selectedDevice === '') return { boards: [] };
+    
+    const device = devices.find((d) => d.name == selectedDevice);
+    if (!device) return { boards: [] };
+    
+    if (device.name === 'Nerdminer') {
+      // Return dynamic boards for Nerdminer
+      return { boards: nerdminerBoards };
+    }
+    
+    return device;
+  };
+  
+  const device = getDeviceData();
   const board =
     selectedBoardVersion !== ''
       ? device.boards.find((b) => b.name == selectedBoardVersion)!
