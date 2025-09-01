@@ -185,20 +185,8 @@
   }
   body {
     @apply text-foreground;
-    background: linear-gradient(rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.85)), url('/pictures/Bitronics_hw.png');
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
     min-height: 100vh;
     transition: background-image 0.3s ease;
-  }
-
-  /* Nerdminer background */
-  body.nerdminer-bg {
-    background: linear-gradient(rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.85)), url('/pictures/fondoNM3.png');
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
   }
 }
 

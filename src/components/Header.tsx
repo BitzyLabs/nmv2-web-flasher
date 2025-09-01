@@ -4,6 +4,8 @@ import { useTheme } from 'next-themes';
 import { ThemeToggle } from './ThemeToggle';
 //import LanguageSelector from './LanguageSelector'
 
+const basePath = process.env.NODE_ENV === 'production' ? '/bitronics-web-flasher' : '';
+
 interface HeaderProps {
   onOpenPanel: () => void;
 }
@@ -21,8 +23,8 @@ export default function Header({ onOpenPanel }: HeaderProps) {
             <img
               src={
                 theme === 'dark'
-                  ? '../../pictures/bitronics-logo-dark.svg'
-                  : '../../pictures/bitronics-logo-light.svg'
+                  ? `${basePath}/pictures/bitronics-logo-dark.svg`
+                  : `${basePath}/pictures/bitronics-logo-light.svg`
               }
               alt="Bitroics logo"
               style={{ width: '50%' }}

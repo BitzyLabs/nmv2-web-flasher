@@ -103,6 +103,12 @@ export default function LandingHero() {
     const isChromium = /chrome|chromium|crios|edge/i.test(userAgent);
     setIsChromiumBased(isChromium);
     
+    // Initialize default background
+    document.body.style.background = `linear-gradient(rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.85)), url('${basePath}/pictures/Bitronics_hw.png')`;
+    document.body.style.backgroundSize = 'cover';
+    document.body.style.backgroundPosition = 'center';
+    document.body.style.backgroundAttachment = 'fixed';
+    
     // Load Nerdminer boards dynamically
     loadNerdminerBoards();
   }, []);
@@ -428,10 +434,15 @@ export default function LandingHero() {
     
     // Change background for Nerdminer
     if (name === 'Nerdminer') {
-      document.body.classList.add('nerdminer-bg');
+      document.body.style.background = `linear-gradient(rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.85)), url('${basePath}/pictures/fondoNM3.png')`;
+      document.body.classList.remove('nerdminer-bg');
     } else {
+      document.body.style.background = `linear-gradient(rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.85)), url('${basePath}/pictures/Bitronics_hw.png')`;
       document.body.classList.remove('nerdminer-bg');
     }
+    document.body.style.backgroundSize = 'cover';
+    document.body.style.backgroundPosition = 'center';
+    document.body.style.backgroundAttachment = 'fixed';
   };
 
   if (!isChromiumBased) {
