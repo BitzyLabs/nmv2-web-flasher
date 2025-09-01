@@ -47,7 +47,7 @@
     },
     {
       "name": "Nerdaxe",
-      "picture": "../../pictures/nerdaxe.png",
+      "picture": "pictures/nerdaxe.png",
       "boards": [
         {
           "name": "Ultra",
@@ -79,7 +79,7 @@
     },
     {
       "name": "NerdQaxe",
-      "picture": "../../pictures/nerdqaxe.png",
+      "picture": "pictures/NerdQaxe.png",
       "boards": [
         {
           "name": "+ (2.4THs)",
@@ -111,7 +111,7 @@
     },
     {
       "name": "NerdNos",
-      "picture": "../../pictures/nerdnos.png",
+      "picture": "pictures/nerdnos.png",
       "boards": [
         {
           "name": "100",
