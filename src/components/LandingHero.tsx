@@ -453,7 +453,10 @@ export default function LandingHero() {
           <div className="flex flex-col items-center space-y-4 text-center gap-8">
             <div className="space-y-2 mb-14">
               <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none">
-                {t('hero.title')}
+                {selectedDevice === 'Nerdminer' 
+                  ? 'Flash, play and learn with nerdminer'
+                  : t('hero.title')
+                }
               </h1>
               <p className="mx-auto max-w-[700px] text-gray-500 md:text-xl dark:text-gray-400">
                 {t('hero.description')}
