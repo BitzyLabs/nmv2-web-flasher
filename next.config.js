@@ -4,8 +4,8 @@ const nextConfig = {
   output: 'export',
   ...(process.env.NODE_ENV === 'production'
     ? {
-        basePath: '/bitmaker-web-flasher',
-        assetPrefix: '/bitmaker-web-flasher',
+        basePath: '/bitronics-web-flasher',
+        assetPrefix: '/bitronics-web-flasher',
       }
     : {}),
   images: {

@@ -153,7 +153,7 @@ export default function LandingHero() {
       : { supported_firmware: [] };
   const firmware =
     selectedFirmware !== ''
-      ? board.supported_firmware.find((f) => f.version == selectedFirmware)!
+      ? board.supported_firmware.find((f: any) => f.version == selectedFirmware)!
       : { path: '' };
 
   const handleConnect = async () => {
@@ -505,7 +505,7 @@ export default function LandingHero() {
                 />
                 <Selector
                   placeholder={t('hero.selectFirmware')}
-                  values={board.supported_firmware.map((f) => f.version)}
+                  values={board.supported_firmware.map((f: any) => f.version)}
                   onValueChange={setSelectedFirmware}
                   disabled={isConnecting || isFlashing || selectedBoardVersion === ''}
                 />
