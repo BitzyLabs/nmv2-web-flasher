@@ -160,6 +160,206 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background: linear-gradient(rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.85)), url('/pictures/Bitronics_hw.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    min-height: 100vh;
+    transition: background-image 0.3s ease;
   }
+
+  /* Nerdminer background */
+  body.nerdminer-bg {
+    background: linear-gradient(rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.85)), url('/pictures/fondoNM3.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+  }
+}
+
+/* Header custom styles */
+.header-custom {
+  background-color: #212121 !important;
+  width: 100vw;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  color: white !important;
+}
+
+.header-custom * {
+  color: white !important;
+}
+
+/* Add padding to body to compensate for fixed header */
+body {
+  padding-top: 5rem; /* 80px = h-20 */
+}
+
+/* Discord badge styling */
+.discord-badge {
+  filter: brightness(0.6) saturate(0.8);
+  background-color: #212121 !important;
+  border-radius: 4px;
+  padding: 2px;
+}
+
+/* Features section styling */
+.features-section {
+  background-color: #EDF2F7 !important;
+  color: #212121 !important;
+}
+
+.features-section * {
+  color: #212121 !important;
+}
+
+.features-section .text-gray-500,
+.features-section .dark\\:text-gray-400 {
+  color: #212121 !important;
+  opacity: 0.8;
+}
+
+/* Custom selector styling - more specific */
+[data-radix-select-trigger],
+button[data-radix-select-trigger],
+button[role="combobox"] {
+  background-color: #212121 !important;
+  color: white !important;
+  border: 1px solid #374151 !important;
+}
+
+[data-radix-select-content],
+div[data-radix-select-content],
+[data-radix-popper-content-wrapper] > div,
+div[data-radix-popper-content-wrapper] {
+  background-color: #212121 !important;
+  color: white !important;
+  border: 1px solid #374151 !important;
+  box-shadow: 0 10px 38px -10px rgba(0, 0, 0, 0.35), 0 10px 20px -15px rgba(0, 0, 0, 0.2) !important;
+}
+
+[data-radix-select-item],
+div[data-radix-select-item],
+[role="option"] {
+  background-color: #212121 !important;
+  color: white !important;
+  padding: 8px 12px !important;
+}
+
+[data-radix-select-item]:hover,
+[data-radix-select-item]:focus,
+div[data-radix-select-item]:hover,
+div[data-radix-select-item]:focus,
+[role="option"]:hover,
+[role="option"]:focus {
+  background-color: #374151 !important;
+  outline: none !important;
+}
+
+[data-radix-select-item][data-highlighted],
+div[data-radix-select-item][data-highlighted],
+[role="option"][data-highlighted] {
+  background-color: #374151 !important;
+}
+
+/* Radix Select viewport and scrollarea */
+[data-radix-select-viewport] {
+  background-color: #212121 !important;
+}
+
+[data-radix-scroll-area-viewport] {
+  background-color: #212121 !important;
+}
+
+/* Fallback with higher specificity */
+.select-content,
+div[class*="select"] {
+  background-color: #212121 !important;
+  color: white !important;
+}
+
+.select-item,
+div[class*="select"] > div {
+  background-color: #212121 !important;
+  color: white !important;
+}
+
+/* Custom size for 25% larger icons */
+.h-30 {
+  height: 7.5rem; /* 120px - 25% larger than h-24 (96px) */
+}
+
+.w-30 {
+  width: 7.5rem; /* 120px - 25% larger than w-24 (96px) */
+}
+
+/* Custom size for 50% larger icons (25% more than current) */
+.h-38 {
+  height: 9.5rem; /* 152px - 25% larger than h-30 (120px) */
+}
+
+.w-38 {
+  width: 9.5rem; /* 152px - 25% larger than w-30 (120px) */
+}
+
+/* Custom size for icons - perfect 150px desktop */
+.h-37 {
+  height: 9.375rem; /* 150px - perfect size for desktop */
+}
+
+.w-37 {
+  width: 9.375rem; /* 150px - perfect size for desktop */
+}
+
+.h-29 {
+  height: 7.25rem; /* 116px - proportional for tablet */
+}
+
+.w-29 {
+  width: 7.25rem; /* 116px - proportional for tablet */
+}
+
+.h-25 {
+  height: 6.25rem; /* 100px - proportional for mobile */
+}
+
+.w-25 {
+  width: 6.25rem; /* 100px - proportional for mobile */
+}
+
+/* Device Modal styling */
+.device-modal {
+  background-color: #212121 !important;
+  color: white !important;
+}
+
+.device-modal * {
+  color: white !important;
+}
+
+/* Fix dropdown layout shift */
+body {
+  overflow-anchor: none;
+}
+
+[data-radix-select-content] {
+  position: fixed !important;
+  z-index: 9999 !important;
+  will-change: transform !important;
+}
+
+/* Prevent layout shift when dropdown opens */
+[data-radix-select-trigger] {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Ensure consistent positioning */
+.flex.flex-col.justify-between.items-center {
+  min-height: fit-content;
+  align-items: stretch;
 }

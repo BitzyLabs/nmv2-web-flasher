@@ -7,7 +7,7 @@ export default function Features() {
   return (
     <section
       id="features"
-      className="text-bitronics w-full py-12 md:py-24 lg:py-32 bg-gray-100 dark:bg-gray-800"
+      className="w-full py-12 md:py-24 lg:py-32 features-section"
     >
       <div className="container px-4 md:px-6">
         <h2 className="text-2xl font-bold text-center mb-8">{t('features.title')}</h2>

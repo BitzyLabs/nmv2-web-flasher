@@ -1,208 +1,230 @@
 {
   "devices": [
     {
-      "name": "Max",
-      "picture": "../../pictures/placeholderImg.png",
+      "name": "Nerdminer",
+      "picture": "../../pictures/nerdminer.png",
       "boards": [
         {
-          "name": "102",
+          "name": "NERDMINERV2 ORIGINAL BOARD (TDISPLAY-S3)",
           "supported_firmware": [
             {
-              "version": "2.4.5",
-              "path": "firmware/esp-miner-factory-102-v2.4.5.bin"
+              "version": "v1.7.0",
+              "path": "firmware/nerdminer/v1.7.0/NerdminerV2_factory.bin"
             },
             {
-              "version": "2.5.1",
-              "path": "firmware/esp-miner-factory-102-v2.5.1.bin"
+              "version": "v1.6.3",
+              "path": "firmware/nerdminer/v1.6.3/NerdminerV2_factory.bin"
+            }
+          ]
+        },
+        {
+          "name": "ESP32-2432S028R",
+          "supported_firmware": [
+            {
+              "version": "v1.7.0",
+              "path": "firmware/nerdminer/v1.7.0/ESP32-2432S028R_factory.bin"
+            }
+          ]
+        },
+        {
+          "name": "ESP32-C3-devKitmv1",
+          "supported_firmware": [
+            {
+              "version": "v1.7.0",
+              "path": "firmware/nerdminer/v1.7.0/ESP32-C3-devKitmv1_factory.bin"
+            }
+          ]
+        },
+        {
+          "name": "ESP32-C3-super-mini",
+          "supported_firmware": [
+            {
+              "version": "v1.7.0",
+              "path": "firmware/nerdminer/v1.7.0/ESP32-C3-super-mini_factory.bin"
+            }
+          ]
+        },
+        {
+          "name": "ESP32-devKitv1",
+          "supported_firmware": [
+            {
+              "version": "v1.7.0",
+              "path": "firmware/nerdminer/v1.7.0/ESP32-devKitv1_factory.bin"
+            },
+            {
+              "version": "v1.6.3",
+              "path": "firmware/nerdminer/v1.6.3/ESP32-devKitv1_factory.bin"
+            }
+          ]
+        },
+        {
+          "name": "NerdminerV2-S3-AMOLED",
+          "supported_firmware": [
+            {
+              "version": "v1.7.0",
+              "path": "firmware/nerdminer/v1.7.0/NerdminerV2-S3-AMOLED_factory.bin"
+            },
+            {
+              "version": "v1.6.3",
+              "path": "firmware/nerdminer/v1.6.3/NerdminerV2-S3-AMOLED_factory.bin"
+            }
+          ]
+        },
+        {
+          "name": "NerdminerV2-S3-DONGLE",
+          "supported_firmware": [
+            {
+              "version": "v1.7.0",
+              "path": "firmware/nerdminer/v1.7.0/NerdminerV2-S3-DONGLE_factory.bin"
+            },
+            {
+              "version": "v1.6.3",
+              "path": "firmware/nerdminer/v1.6.3/NerdminerV2-S3-DONGLE_factory.bin"
+            }
+          ]
+        },
+        {
+          "name": "NerdminerV2-T-Display_V1",
+          "supported_firmware": [
+            {
+              "version": "v1.7.0",
+              "path": "firmware/nerdminer/v1.7.0/NerdminerV2-T-Display_V1_factory.bin"
+            },
+            {
+              "version": "v1.6.3",
+              "path": "firmware/nerdminer/v1.6.3/NerdminerV2-T-Display_V1_factory.bin"
+            }
+          ]
+        },
+        {
+          "name": "NerdminerV2-T-QT",
+          "supported_firmware": [
+            {
+              "version": "v1.7.0",
+              "path": "firmware/nerdminer/v1.7.0/NerdminerV2-T-QT_factory.bin"
+            },
+            {
+              "version": "v1.6.3",
+              "path": "firmware/nerdminer/v1.6.3/NerdminerV2-T-QT_factory.bin"
             }
           ]
         }
       ]
     },
     {
-      "name": "Ultra",
-      "picture": "../../pictures/placeholderImg.png",
+      "name": "Bitaxe",
+      "picture": "../../pictures/bitaxe.png",
       "boards": [
         {
-          "name": "201",
+          "name": "Supra 401",
           "supported_firmware": [
             {
-              "version": "2.5.1",
-              "path": "firmware/esp-miner-factory-201-v2.5.1.bin"
+              "version": "2.9.0",
+              "path": "firmware/bitaxe-supra 401-v2.9.0.bin"
             },
             {
-              "version": "2.4.5",
-              "path": "firmware/esp-miner-factory-201-v2.4.5.bin"
+              "version": "2.8.0",
+              "path": "firmware/bitaxe-supra 401-v2.8.0.bin"
+            },
+            {
+              "version": "2.7.1",
+              "path": "firmware/bitaxe-supra 401-v2.7.1.bin"
             }
           ]
         },
         {
-          "name": "202",
+          "name": "Gamma 601",
           "supported_firmware": [
             {
-              "version": "2.4.5",
-              "path": "firmware/esp-miner-factory-202-v2.4.5.bin"
+              "version": "2.9.0",
+              "path": "firmware/bitaxe-gamma 601-v2.9.0.bin"
             },
             {
-              "version": "2.5.1",
-              "path": "firmware/esp-miner-factory-202-v2.5.1.bin"
-            }
-          ]
-        },
-        {
-          "name": "203",
-          "supported_firmware": [
-            {
-              "version": "2.5.1",
-              "path": "firmware/esp-miner-factory-203-v2.5.1.bin"
+              "version": "2.8.0",
+              "path": "firmware/bitaxe-gamma 601-v2.8.0.bin"
             },
             {
-              "version": "2.4.5",
-              "path": "firmware/esp-miner-factory-203-v2.4.5.bin"
-            }
-          ]
-        },
-        {
-          "name": "204",
-          "supported_firmware": [
-            {
-              "version": "2.4.5",
-              "path": "firmware/esp-miner-factory-204-v2.4.5.bin"
-            },
-            {
-              "version": "2.5.1",
-              "path": "firmware/esp-miner-factory-204-v2.5.1.bin"
-            }
-          ]
-        },
-        {
-          "name": "205",
-          "supported_firmware": [
-            {
-              "version": "2.4.5",
-              "path": "firmware/esp-miner-factory-205-v2.4.5.bin"
-            },
-            {
-              "version": "2.5.1",
-              "path": "firmware/esp-miner-factory-205-v2.5.1.bin"
+              "version": "2.7.1",
+              "path": "firmware/bitaxe-gamma 601-v2.7.1.bin"
             }
           ]
         }
       ]
     },
     {
-      "name": "Supra",
-      "picture": "../../pictures/placeholderImg.png",
+      "name": "Nerdaxe",
+      "picture": "../../pictures/nerdaxe.png",
       "boards": [
         {
-          "name": "401",
+          "name": "Ultra",
           "supported_firmware": [
             {
-              "version": "2.4.5",
-              "path": "firmware/esp-miner-factory-401-v2.4.5.bin"
+              "version": "1.0.31",
+              "path": "firmware/NerdAxe-ultra-v1.0.31.bin"
             },
             {
-              "version": "2.5.1",
-              "path": "firmware/esp-miner-factory-401-v2.5.1.bin"
+              "version": "1.0.29",
+              "path": "firmware/NerdAxe-ultra-v1.0.29.bin"
             }
           ]
         },
         {
-          "name": "402",
+          "name": "Gamma",
           "supported_firmware": [
             {
-              "version": "2.4.5",
-              "path": "firmware/esp-miner-factory-402-v2.4.5.bin"
+              "version": "1.0.31",
+              "path": "firmware/NerdAxe-Gamma-v1.0.31.bin"
             },
             {
-              "version": "2.5.1",
-              "path": "firmware/esp-miner-factory-402-v2.5.1.bin"
-            }
-          ]
-        },
-        {
-          "name": "403",
-          "supported_firmware": [
-            {
-              "version": "2.4.5",
-              "path": "firmware/esp-miner-factory-403-v2.4.5.bin"
-            },
-            {
-              "version": "2.5.1",
-              "path": "firmware/esp-miner-factory-403-v2.5.1.bin"
+              "version": "1.0.29",
+              "path": "firmware/NerdAxe-Gamma-v1.0.29.bin"
             }
           ]
         }
       ]
     },
     {
-      "name": "Gamma",
-      "picture": "../../pictures/placeholderImg.png",
+      "name": "NerdQaxe",
+      "picture": "../../pictures/nerdqaxe.png",
       "boards": [
         {
-          "name": "601",
+          "name": "+ (2.4THs)",
           "supported_firmware": [
             {
-              "version": "2.4.5",
-              "path": "firmware/esp-miner-factory-601-v2.4.5.bin"
+              "version": "1.0.31",
+              "path": "firmware/NerdQAxe-+ (2,4THs)-v1.0.31.bin"
             },
             {
-              "version": "2.5.1",
-              "path": "firmware/esp-miner-factory-601-v2.5.1.bin"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "UltraHex",
-      "picture": "../../pictures/placeholderImg.png",
-      "boards": [
-        {
-          "name": "302",
-          "supported_firmware": [
-            {
-              "version": "2.1.0",
-              "path": "firmware/esp-miner-factory-302-v2.1.0.bin"
+              "version": "1.0.29",
+              "path": "firmware/NerdQAxe-+ (2,4THs)-v1.0.29.bin"
             }
           ]
         },
         {
-          "name": "303",
+          "name": "++ (4.8THs)",
           "supported_firmware": [
             {
-              "version": "2.1.0",
-              "path": "firmware/esp-miner-factory-303-v2.1.0.bin"
+              "version": "1.0.31",
+              "path": "firmware/NerdQAxe-++ (4,8Ths)-v1.0.31.bin"
+            },
+            {
+              "version": "1.0.29",
+              "path": "firmware/NerdQAxe-++ (4,8Ths)-v1.0.29.bin"
             }
           ]
         }
       ]
     },
     {
-      "name": "NerdMiner",
-      "picture": "../../pictures/placeholderImg.png",
+      "name": "NerdNos",
+      "picture": "../../pictures/nerdnos.png",
       "boards": [
         {
           "name": "100",
           "supported_firmware": [
             {
-              "version": "1.0.0",
-              "path": "firmware/merged-flash-nerdminer.bin"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "NerdNOS",
-      "picture": "../../pictures/placeholderImg.png",
-      "boards": [
-        {
-          "name": "100",
-          "supported_firmware": [
-            {
-              "version": "1.0.0",
-              "path": "firmware/merged-flash.bin"
+              "version": "1.0.4",
+              "path": "firmware/nerdnos-100-v1.0.4.bin"
             }
           ]
         }

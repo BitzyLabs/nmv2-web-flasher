@@ -1,8 +1,8 @@
 [![](https://dcbadge.vercel.app/api/server/3E8ca2dkcC)](https://discord.gg/3E8ca2dkcC)
 
-# Bitaxe Web Flasher
+# Bitronics Web Flasher
 
-The Bitaxe Web Flasher is the open source tool that provides you an easy solution to flash a factory file to you device.
+The Bitronics Web Flasher is the open source tool that provides you an easy solution to flash a factory file to you device.
 
 ## Flashing process
 
@@ -14,10 +14,10 @@ You can use Docker for compiling the application and to run it locally by
 
 ```bash
 # build the image
-docker build . -f Dockerfile -t bitaxe-web-flasher
+docker build . -f Dockerfile -t bitronics-web-flasher
 
 # run the container
-docker run --rm -d -p 3000:3000 bitaxe-web-flasher
+docker run --rm -d -p 3000:3000 bitronics-web-flasher
 ```
 
 and access it by `http://localhost:3000`

@@ -13,18 +13,28 @@ export default function DeviceModal({ isOpen, onClose, selectDevice }: DeviceMod
   const devices = device_data.devices;
 
   return (
-    <div
-      className={`text-bitronics fixed top-[5vh] left-0 max-h-[85vh] w-full lg:w-5/6 px-4 overflow-scroll bg-white dark:bg-gray-800 p-4 shadow-lg transform ${
-        isOpen ? 'lg:translate-x-[10%]' : '-translate-x-full'
-      } transition-transform duration-300 ease-in-out rounded-lg`}
-    >
+    <>
+      {/* Overlay */}
+      <div
+        className={`fixed inset-0 bg-black/50 ${
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        } transition-opacity duration-300 z-40`}
+        onClick={onClose}
+      />
+      
+      {/* Modal */}
+      <div
+        className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-[85vh] w-full max-w-4xl px-4 overflow-scroll p-4 shadow-lg ${
+          isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'
+        } transition-all duration-300 ease-in-out rounded-lg z-50 device-modal`}
+      >
       <button
-        className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+        className="absolute top-4 right-4 text-white hover:text-gray-300"
         onClick={onClose}
       >
         <X className="h-6 w-6" />
       </button>
-      <h2 className="text-xl font-bold mb-4">{t('devicesModal.title')}</h2>
+      <h2 className="text-xl font-bold mb-4 text-white">{t('devicesModal.title')}</h2>
       <div className="flex flex-wrap gap-8 justify-center p-6">
         {devices.map((d) => (
           <div
@@ -34,11 +44,12 @@ export default function DeviceModal({ isOpen, onClose, selectDevice }: DeviceMod
               selectDevice(d.name);
             }}
           >
-            <img className="mb-2" src={d.picture} alt={d.name} />
-            <div className="mb-4 w-full text-center">{d.name}</div>
+            <img className="mb-2 w-30 h-30 mx-auto object-contain" src={d.picture} alt={d.name} />
+            <div className="mb-4 w-full text-center text-white">{d.name}</div>
           </div>
         ))}
       </div>
-    </div>
+      </div>
+    </>
   );
 }

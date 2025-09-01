@@ -27,6 +27,7 @@ export default function LandingHero() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isChromiumBased, setIsChromiumBased] = useState(true);
+  const [keepConfiguration, setKeepConfiguration] = useState(false);
   const serialPortRef = useRef<any>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const terminalContainerRef = useRef<HTMLDivElement>(null);
@@ -115,9 +116,6 @@ export default function LandingHero() {
       serialPortRef.current = null;
       setIsConnected(false);
       setStatus('');
-      setSelectedDevice('');
-      setSelectedBoardVersion('');
-      setSelectedFirmware('');
     } catch (error) {
       console.error('Disconnect error:', error);
       setStatus(
@@ -257,7 +255,36 @@ export default function LandingHero() {
         throw new Error('No firmware available for the selected device and board version');
       }
 
-      const firmwareResponse = await fetch(firmware.path);
+      // Handle single file flashing for all devices (now including Nerdminer)
+      let firmwarePath;
+      let flashAddress = 0;
+      
+      if (selectedDevice === 'Nerdminer') {
+        // For Nerdminer, construct the path based on keep configuration setting
+        let boardName = selectedBoardVersion;
+        const version = selectedFirmware;
+        
+        // Handle the special case of the original board
+        if (boardName === 'NERDMINERV2 ORIGINAL BOARD (TDISPLAY-S3)') {
+          boardName = 'NerdminerV2';
+        }
+        
+        if (keepConfiguration) {
+          // Use firmware-only file and flash to 0x10000
+          firmwarePath = `firmware/nerdminer/${version}/${boardName}_firmware.bin`;
+          flashAddress = 0x10000;
+        } else {
+          // Use factory file and flash to 0x0000
+          firmwarePath = `firmware/nerdminer/${version}/${boardName}_factory.bin`;
+          flashAddress = 0x0000;
+        }
+      } else {
+        // For other devices, use the regular path
+        firmwarePath = firmware.path;
+        flashAddress = 0;
+      }
+
+      const firmwareResponse = await fetch(firmwarePath);
       if (!firmwareResponse.ok) {
         throw new Error('Failed to load firmware file');
       }
@@ -274,7 +301,7 @@ export default function LandingHero() {
         fileArray: [
           {
             data: firmwareBinaryString,
-            address: 0,
+            address: flashAddress,
           },
         ],
         flashSize: 'keep',
@@ -318,6 +345,13 @@ export default function LandingHero() {
     setSelectedBoardVersion('');
     setSelectedFirmware('');
     setIsModalOpen(false);
+    
+    // Change background for Nerdminer
+    if (name === 'Nerdminer') {
+      document.body.classList.add('nerdminer-bg');
+    } else {
+      document.body.classList.remove('nerdminer-bg');
+    }
   };
 
   if (!isChromiumBased) {
@@ -347,31 +381,29 @@ export default function LandingHero() {
                 {t('hero.description')}
               </p>
             </div>
-            <div className="w-full max-w-sm space-y-2">
-              <Button
-                className="w-full"
-                onClick={isConnected ? handleDisconnect : handleConnect}
-                disabled={isConnecting || isFlashing}
-              >
-                {isConnected ? t('hero.disconnect') : t('hero.connect')}
-                <Usb className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
             <div className="flex flex-col justify-between items-center w-3/4 gap-y-20 md:flex-row">
               <div className="flex flex-col justify-center w-52">
-                <RadioReceiver
-                  className="h-24 w-24 md:h-32 md:w-32 lg:h-48 lg:w-48 lg:h-48 lg:w-48 mb-4 m-auto"
-                  color="#FFB000"
-                  strokeWidth={1}
-                />
-                <Button onClick={openModal} disabled={isConnecting || isFlashing || !isConnected}>
+                {selectedDevice === '' ? (
+                  <RadioReceiver
+                    className="h-25 w-25 md:h-29 md:w-29 lg:h-37 lg:w-37 mb-4 m-auto"
+                    color="#6B7280"
+                    strokeWidth={1}
+                  />
+                ) : (
+                  <img
+                    src={devices.find(d => d.name === selectedDevice)?.picture}
+                    alt={selectedDevice}
+                    className="h-25 w-25 md:h-29 md:w-29 lg:h-37 lg:w-37 mb-4 m-auto object-contain rounded-lg"
+                  />
+                )}
+                <Button onClick={openModal} disabled={isConnecting || isFlashing}>
                   {selectedDevice === '' ? t('hero.selectDevice') : selectedDevice}
                 </Button>
               </div>
               <div className="flex flex-col justify-center w-52">
                 <Cpu
-                  className="h-24 w-24 md:h-32 md:w-32 lg:h-48 lg:w-48 mb-4 m-auto"
-                  color="#FFB000"
+                  className="h-25 w-25 md:h-29 md:w-29 lg:h-37 lg:w-37 mb-4 m-auto"
+                  color="#6B7280"
                   strokeWidth={1}
                 />
                 <Selector
@@ -386,8 +418,8 @@ export default function LandingHero() {
               </div>
               <div className="flex flex-col justify-center w-52">
                 <GitCompareIcon
-                  className="h-24 w-24 md:h-32 md:w-32 lg:h-48 lg:w-48 mb-4 m-auto"
-                  color="#FFB000"
+                  className="h-25 w-25 md:h-29 md:w-29 lg:h-37 lg:w-37 mb-4 m-auto"
+                  color="#6B7280"
                   strokeWidth={1}
                 />
                 <Selector
@@ -398,13 +430,39 @@ export default function LandingHero() {
                 />
               </div>
             </div>
-            <div>
+            
+            {/* Keep Configuration Checkbox (only for Nerdminer) */}
+            {selectedDevice === 'Nerdminer' && (
+              <div className="flex items-center space-x-2 justify-center">
+                <input
+                  type="checkbox"
+                  id="keepConfiguration"
+                  checked={keepConfiguration}
+                  onChange={(e) => setKeepConfiguration(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                />
+                <label htmlFor="keepConfiguration" className="text-sm font-medium text-gray-900 dark:text-gray-300">
+                  {t('hero.keepConfiguration')}
+                </label>
+              </div>
+            )}
+            
+            <div className="w-full max-w-sm space-y-4">
               <Button
-                className="w-full mb-8"
+                className="w-full"
+                onClick={isConnected ? handleDisconnect : handleConnect}
+                disabled={isConnecting || isFlashing || !selectedDevice || !selectedBoardVersion || !selectedFirmware}
+              >
+                {isConnected ? t('hero.disconnect') : t('hero.connect')}
+                <Usb className="ml-2 h-4 w-4" />
+              </Button>
+              <Button
+                className="w-full mb-4"
                 onClick={handleStartFlashing}
                 disabled={
                   !selectedDevice ||
                   !selectedBoardVersion ||
+                  !selectedFirmware ||
                   isConnecting ||
                   isFlashing ||
                   !isConnected

@@ -6,17 +6,17 @@ import { I18nProvider } from '../components/I18nProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 
-const basePath = process.env.NODE_ENV === 'production' ? '/bitaxe-web-flasher' : '';
+const basePath = process.env.NODE_ENV === 'production' ? '/bitronics-web-flasher' : '';
 
 export const metadata: Metadata = {
-  title: 'Bitmaker Web Flasher',
-  description: 'Flash your Bitmaker devices directly from the web',
+  title: 'Bitronics flasher',
+  description: 'Flash your Bitronics devices directly from the web',
   icons: {
     icon: [
       {
-        url: `${basePath}/pictures/logo.png`,
+        url: `${basePath}/pictures/favicon.svg`,
         sizes: 'any',
-        type: 'image/png',
+        type: 'image/svg+xml',
       },
     ],
   },
@@ -28,7 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={inter.className}>
         <ClientThemeWrapper>
           <I18nProvider>
-            <div className="min-h-screen bg-background text-foreground">
+            <div className="min-h-screen text-foreground">
               <main className="w-full p-4">{children}</main>
             </div>
           </I18nProvider>
