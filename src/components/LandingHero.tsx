@@ -40,7 +40,7 @@ export default function LandingHero() {
   // Function to load all Nerdminer boards from manifests
   const loadNerdminerBoards = async () => {
     try {
-      const versions = ['v1.7.0', 'v1.6.3'];
+      const versions = ['v1.7.1', 'v1.7.0', 'v1.6.3'];
       const allBoards = new Map<string, any>();
       
       for (const version of versions) {
