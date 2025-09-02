@@ -1,4 +1,3 @@
-[![](https://dcbadge.vercel.app/api/server/3E8ca2dkcC)](https://discord.gg/3E8ca2dkcC)
 
 # Bitronics Web Flasher
 
