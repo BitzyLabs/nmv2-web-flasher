@@ -6,21 +6,19 @@ import { I18nProvider } from '../components/I18nProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 
-const basePath = process.env.NODE_ENV === 'production' ? '/bitronics-web-flasher' : '';
-
 export const metadata: Metadata = {
   title: 'Bitronics flasher',
   description: 'Flash your Bitronics devices directly from the web',
   icons: {
     icon: [
       {
-        url: `${basePath}/pictures/favicon.svg`,
+        url: '/pictures/favicon.svg',
         sizes: 'any',
         type: 'image/svg+xml',
       },
     ],
-    shortcut: `${basePath}/pictures/favicon.svg`,
-    apple: `${basePath}/pictures/favicon.svg`,
+    shortcut: '/pictures/favicon.svg',
+    apple: '/pictures/favicon.svg',
   },
 };
 

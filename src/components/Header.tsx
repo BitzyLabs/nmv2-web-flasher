@@ -4,7 +4,7 @@ import { useTheme } from 'next-themes';
 import { ThemeToggle } from './ThemeToggle';
 //import LanguageSelector from './LanguageSelector'
 
-const basePath = process.env.NODE_ENV === 'production' ? '/bitronics-web-flasher' : '';
+const basePath = '';
 
 interface HeaderProps {
   onOpenPanel: () => void;

@@ -14,7 +14,7 @@ import device_data from './firmware_data.json';
 import { Terminal } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
 
-const basePath = process.env.NODE_ENV === 'production' ? '/bitronics-web-flasher' : '';
+const basePath = '';
 
 export default function LandingHero() {
   const { t } = useTranslation();
