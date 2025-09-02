@@ -19,7 +19,7 @@ export default function Header({ onOpenPanel }: HeaderProps) {
       <div className="px-4 lg:px-6 flex items-center w-full max-w-screen-xl mx-auto">
         {/* Left section */}
         <div className="flex-1">
-          <Link className="flex items-baseline " href="#">
+          <a className="flex items-baseline " href="https://bitronics.store">
             <img
               src={
                 theme === 'dark'
@@ -29,7 +29,7 @@ export default function Header({ onOpenPanel }: HeaderProps) {
               alt="Bitroics logo"
               style={{ width: '50%' }}
             />
-          </Link>
+          </a>
         </div>
 
         {/* Middle section - centered */}
