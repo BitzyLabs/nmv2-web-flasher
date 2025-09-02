@@ -62,7 +62,7 @@ export default function Header({ onOpenPanel }: HeaderProps) {
             </Link>
             <Link
               className="text-sm font-medium hover:underline underline-offset-4"
-              href="https://bitronics.store/nerdminer/"
+              href="https://bitronics.store/shop/"
               target="__blank"
             >
               {t('header.shop')}
