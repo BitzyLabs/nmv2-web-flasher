@@ -904,6 +904,17 @@ export default function LandingHero() {
     return true;
   };
 
+  // Check if the selected board supports custom AP name
+  const supportsCustomAPName = (): boolean => {
+    return selectedBoardVersion === 'NERDMINERV2 ORIGINAL BOARD (TDISPLAY-S3)' || 
+           selectedBoardVersion === 'ESP32-devKitv1' ||
+           selectedBoardVersion === 'ESP32-S3-mini-wemos' ||
+           selectedBoardVersion === 'ESP32-S3-devKitv1' ||
+           selectedBoardVersion === 'esp32-s3-devkitc1-n32r8' ||
+           selectedBoardVersion === 'ESP32-C3-devKitmv1' ||
+           selectedBoardVersion === 'ESP32-D0WD-V3-weact';
+  };
+
   const handleStartFlashing = async () => {
     if (!serialPortRef.current) {
       setStatus(t('status.connectFirst'));
@@ -1082,7 +1093,7 @@ export default function LandingHero() {
           customAPName && 
           apName && 
           validateSSID(apName) &&
-          (selectedBoardVersion === 'NERDMINERV2 ORIGINAL BOARD (TDISPLAY-S3)' || selectedBoardVersion === 'ESP32-devKitv1')) {
+          supportsCustomAPName()) {
         setStatus('Writing custom AP name...');
         try {
           await flashSimpleConfig(loader, 'apname', apName);
@@ -1226,7 +1237,7 @@ export default function LandingHero() {
                   </label>
                 </div>
                 {/* Custom AP Name checkbox - only for specific boards */}
-                {(selectedBoardVersion === 'NERDMINERV2 ORIGINAL BOARD (TDISPLAY-S3)' || selectedBoardVersion === 'ESP32-devKitv1') && (
+                {supportsCustomAPName() && (
                   <div className="flex items-center space-x-2 justify-center">
                     <input
                       type="checkbox"
@@ -1240,7 +1251,7 @@ export default function LandingHero() {
                     </label>
                   </div>
                 )}
-                {customAPName && (selectedBoardVersion === 'NERDMINERV2 ORIGINAL BOARD (TDISPLAY-S3)' || selectedBoardVersion === 'ESP32-devKitv1') && (
+                {customAPName && supportsCustomAPName() && (
                   <div className="flex flex-col items-center space-y-2">
                     <input
                       type="text"
