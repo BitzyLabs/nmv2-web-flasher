@@ -1,0 +1,14 @@
+{
+  "name": "firmware-updater-scripts",
+  "version": "1.0.0",
+  "description": "Scripts for automated firmware updates",
+  "main": "update-firmware.js",
+  "scripts": {
+    "update": "node update-firmware.js",
+    "test": "node test-update.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "semver": "^7.5.4"
+  }
+}

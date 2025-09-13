@@ -8,121 +8,22 @@
     {
       "name": "Bitaxe",
       "picture": "pictures/bitaxe.png",
-      "boards": [
-        {
-          "name": "Supra 401",
-          "supported_firmware": [
-            {
-              "version": "2.9.0",
-              "path": "firmware/bitaxe-supra 401-v2.9.0.bin"
-            },
-            {
-              "version": "2.8.0",
-              "path": "firmware/bitaxe-supra 401-v2.8.0.bin"
-            },
-            {
-              "version": "2.7.1",
-              "path": "firmware/bitaxe-supra 401-v2.7.1.bin"
-            }
-          ]
-        },
-        {
-          "name": "Gamma 601",
-          "supported_firmware": [
-            {
-              "version": "2.9.0",
-              "path": "firmware/bitaxe-gamma 601-v2.9.0.bin"
-            },
-            {
-              "version": "2.8.0",
-              "path": "firmware/bitaxe-gamma 601-v2.8.0.bin"
-            },
-            {
-              "version": "2.7.1",
-              "path": "firmware/bitaxe-gamma 601-v2.7.1.bin"
-            }
-          ]
-        }
-      ]
+      "boards": []
     },
     {
       "name": "Nerdaxe",
       "picture": "pictures/nerdaxe.png",
-      "boards": [
-        {
-          "name": "Ultra",
-          "supported_firmware": [
-            {
-              "version": "1.0.31",
-              "path": "firmware/NerdAxe-ultra-v1.0.31.bin"
-            },
-            {
-              "version": "1.0.29",
-              "path": "firmware/NerdAxe-ultra-v1.0.29.bin"
-            }
-          ]
-        },
-        {
-          "name": "Gamma",
-          "supported_firmware": [
-            {
-              "version": "1.0.31",
-              "path": "firmware/NerdAxe-Gamma-v1.0.31.bin"
-            },
-            {
-              "version": "1.0.29",
-              "path": "firmware/NerdAxe-Gamma-v1.0.29.bin"
-            }
-          ]
-        }
-      ]
+      "boards": []
     },
     {
       "name": "NerdQaxe",
       "picture": "pictures/NerdQaxe.png",
-      "boards": [
-        {
-          "name": "+ (2.4THs)",
-          "supported_firmware": [
-            {
-              "version": "1.0.31",
-              "path": "firmware/NerdQAxe-+ (2,4THs)-v1.0.31.bin"
-            },
-            {
-              "version": "1.0.29",
-              "path": "firmware/NerdQAxe-+ (2,4THs)-v1.0.29.bin"
-            }
-          ]
-        },
-        {
-          "name": "++ (4.8THs)",
-          "supported_firmware": [
-            {
-              "version": "1.0.31",
-              "path": "firmware/NerdQAxe-++ (4,8Ths)-v1.0.31.bin"
-            },
-            {
-              "version": "1.0.29",
-              "path": "firmware/NerdQAxe-++ (4,8Ths)-v1.0.29.bin"
-            }
-          ]
-        }
-      ]
+      "boards": []
     },
     {
       "name": "NerdNos",
       "picture": "pictures/nerdnos.png",
-      "boards": [
-        {
-          "name": "100",
-          "supported_firmware": [
-            {
-              "version": "1.0.4",
-              "path": "firmware/nerdnos-100-v1.0.4.bin"
-            }
-          ]
-        }
-      ]
+      "boards": []
     }
   ]
 }

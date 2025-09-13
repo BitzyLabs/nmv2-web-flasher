@@ -33,6 +33,10 @@ export default function LandingHero() {
   const [customAPName, setCustomAPName] = useState(false);
   const [apName, setApName] = useState('');
   const [nerdminerBoards, setNerdminerBoards] = useState<any[]>([]);
+  const [nerdaxeBoards, setNerdaxeBoards] = useState<any[]>([]);
+  const [nerdqaxeBoards, setNerdqaxeBoards] = useState<any[]>([]);
+  const [bitaxeBoards, setBitaxeBoards] = useState<any[]>([]);
+  const [nerdnosBoards, setNerdnosBoards] = useState<any[]>([]);
   const serialPortRef = useRef<any>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const terminalContainerRef = useRef<HTMLDivElement>(null);
@@ -40,6 +44,241 @@ export default function LandingHero() {
   const textDecoderRef = useRef<TextDecoderStream | null>(null);
   const readableStreamClosedRef = useRef<Promise<void> | null>(null);
   const logsRef = useRef<string>('');
+
+  // Function to load Nerdaxe boards from nerdqaxe manifests
+  const loadNerdaxeBoards = async () => {
+    try {
+      // Read main manifest to get available versions
+      let versions = ['v1.0.31', 'v1.0.29']; // Fallback versions
+      
+      try {
+        const mainManifestResponse = await fetch(`${basePath}/firmware/nerdqaxe/manifest.json`);
+        if (mainManifestResponse.ok) {
+          const mainManifest = await mainManifestResponse.json();
+          versions = mainManifest.versions || versions;
+          console.log('Available Nerdaxe versions from main manifest:', versions);
+        }
+      } catch (error) {
+        console.warn('Could not read main nerdqaxe manifest, using fallback versions');
+      }
+      
+      const allBoards = new Map<string, any>();
+      
+      for (const version of versions) {
+        try {
+          const manifestResponse = await fetch(`${basePath}/firmware/nerdqaxe/${version}/manifest.json`);
+          if (!manifestResponse.ok) continue;
+          
+          const manifest = await manifestResponse.json();
+          
+          if (manifest.boards && Array.isArray(manifest.boards)) {
+            // Filter only Nerdaxe boards (not NerdQAxe)
+            const nerdaxeBoards = manifest.boards.filter((board: string) => 
+              board.startsWith('NerdAxe') && !board.startsWith('NerdQAxe')
+            );
+            
+            for (const boardName of nerdaxeBoards) {
+              const displayName = boardName === 'NerdAxe' ? 'Ultra' : 
+                                 boardName === 'NerdAxeGamma' ? 'Gamma' : boardName;
+              
+              if (!allBoards.has(displayName)) {
+                allBoards.set(displayName, {
+                  name: displayName,
+                  supported_firmware: []
+                });
+              }
+              
+              allBoards.get(displayName).supported_firmware.push({
+                version: version,
+                path: `${basePath}/firmware/nerdqaxe/${version}/${boardName}_factory.bin`
+              });
+            }
+          }
+        } catch (error) {
+          console.error(`Error loading Nerdaxe manifest for ${version}:`, error);
+        }
+      }
+      
+      const boardsArray = Array.from(allBoards.values());
+      setNerdaxeBoards(boardsArray);
+    } catch (error) {
+      console.error('Error loading Nerdaxe boards:', error);
+    }
+  };
+
+  // Function to load Bitaxe boards from bitaxe manifests
+  const loadBitaxeBoards = async () => {
+    try {
+      // Read main manifest to get available versions
+      let versions = ['v2.10.0']; // Fallback versions
+      
+      try {
+        const mainManifestResponse = await fetch(`${basePath}/firmware/bitaxe/manifest.json`);
+        if (mainManifestResponse.ok) {
+          const mainManifest = await mainManifestResponse.json();
+          versions = mainManifest.versions || versions;
+          console.log('Available Bitaxe versions from main manifest:', versions);
+        }
+      } catch (error) {
+        console.warn('Could not read main bitaxe manifest, using fallback versions');
+      }
+      
+      const allBoards = new Map<string, any>();
+      
+      for (const version of versions) {
+        try {
+          const manifestResponse = await fetch(`${basePath}/firmware/bitaxe/${version}/manifest.json`);
+          if (!manifestResponse.ok) continue;
+          
+          const manifest = await manifestResponse.json();
+          
+          if (manifest.boards && Array.isArray(manifest.boards)) {
+            for (const boardName of manifest.boards) {
+              const displayName = boardName === 'Supra401' ? 'Supra 401' :
+                                 boardName === 'Gamma601' ? 'Gamma 601' : boardName;
+              
+              if (!allBoards.has(displayName)) {
+                allBoards.set(displayName, {
+                  name: displayName,
+                  supported_firmware: []
+                });
+              }
+              
+              allBoards.get(displayName).supported_firmware.push({
+                version: version,
+                path: `${basePath}/firmware/bitaxe/${version}/${boardName}_factory.bin`
+              });
+            }
+          }
+        } catch (error) {
+          console.error(`Error loading Bitaxe manifest for ${version}:`, error);
+        }
+      }
+      
+      const boardsArray = Array.from(allBoards.values());
+      setBitaxeBoards(boardsArray);
+    } catch (error) {
+      console.error('Error loading Bitaxe boards:', error);
+    }
+  };
+
+  // Function to load NerdNos boards from nerdnos manifests
+  const loadNerdnosBoards = async () => {
+    try {
+      // Read main manifest to get available versions
+      let versions = ['v1.0.4']; // Fallback versions
+      
+      try {
+        const mainManifestResponse = await fetch(`${basePath}/firmware/nerdnos/manifest.json`);
+        if (mainManifestResponse.ok) {
+          const mainManifest = await mainManifestResponse.json();
+          versions = mainManifest.versions || versions;
+          console.log('Available NerdNos versions from main manifest:', versions);
+        }
+      } catch (error) {
+        console.warn('Could not read main nerdnos manifest, using fallback versions');
+      }
+
+      const allBoards = new Map();
+
+      // Process each version
+      for (const version of versions) {
+        try {
+          const manifestResponse = await fetch(`${basePath}/firmware/nerdnos/${version}/manifest.json`);
+          if (manifestResponse.ok) {
+            const manifest = await manifestResponse.json();
+            
+            // Process each board in this version
+            if (manifest.boards && Array.isArray(manifest.boards)) {
+              for (const boardName of manifest.boards) {
+                const boardKey = boardName;
+                
+                if (!allBoards.has(boardKey)) {
+                  allBoards.set(boardKey, {
+                    name: boardName,
+                    supported_firmware: []
+                  });
+                }
+                
+                allBoards.get(boardKey).supported_firmware.push({
+                  version: version,
+                  path: `firmware/nerdnos/${version}/${boardName}_factory.bin`
+                });
+              }
+            }
+          }
+        } catch (error) {
+          console.error(`Error loading NerdNos manifest for ${version}:`, error);
+        }
+      }
+      
+      const boardsArray = Array.from(allBoards.values());
+      setNerdnosBoards(boardsArray);
+    } catch (error) {
+      console.error('Error loading NerdNos boards:', error);
+    }
+  };
+
+  // Function to load NerdQaxe boards from nerdqaxe manifests  
+  const loadNerdqaxeBoards = async () => {
+    try {
+      // Read main manifest to get available versions
+      let versions = ['v1.0.31', 'v1.0.29']; // Fallback versions
+      
+      try {
+        const mainManifestResponse = await fetch(`${basePath}/firmware/nerdqaxe/manifest.json`);
+        if (mainManifestResponse.ok) {
+          const mainManifest = await mainManifestResponse.json();
+          versions = mainManifest.versions || versions;
+          console.log('Available NerdQaxe versions from main manifest:', versions);
+        }
+      } catch (error) {
+        console.warn('Could not read main nerdqaxe manifest, using fallback versions');
+      }
+      
+      const allBoards = new Map<string, any>();
+      
+      for (const version of versions) {
+        try {
+          const manifestResponse = await fetch(`${basePath}/firmware/nerdqaxe/${version}/manifest.json`);
+          if (!manifestResponse.ok) continue;
+          
+          const manifest = await manifestResponse.json();
+          
+          if (manifest.boards && Array.isArray(manifest.boards)) {
+            // Filter only NerdQAxe boards
+            const nerdqaxeBoards = manifest.boards.filter((board: string) => 
+              board.startsWith('NerdQAxe')
+            );
+            
+            for (const boardName of nerdqaxeBoards) {
+              const displayName = boardName === 'NerdQAxe++' ? '++ (4.8THs)' :
+                                 boardName === 'NerdQAxe+' ? '+ (2.4THs)' : boardName;
+              
+              if (!allBoards.has(displayName)) {
+                allBoards.set(displayName, {
+                  name: displayName,
+                  supported_firmware: []
+                });
+              }
+              
+              allBoards.get(displayName).supported_firmware.push({
+                version: version,
+                path: `${basePath}/firmware/nerdqaxe/${version}/${boardName}_factory.bin`
+              });
+            }
+          }
+        } catch (error) {
+          console.error(`Error loading NerdQaxe manifest for ${version}:`, error);
+        }
+      }
+      
+      const boardsArray = Array.from(allBoards.values());
+      setNerdqaxeBoards(boardsArray);
+    } catch (error) {
+      console.error('Error loading NerdQaxe boards:', error);
+    }
+  };
 
   // Function to load all Nerdminer boards from manifests
   const loadNerdminerBoards = async () => {
@@ -111,8 +350,12 @@ export default function LandingHero() {
     document.body.style.backgroundPosition = 'center';
     document.body.style.backgroundAttachment = 'fixed';
     
-    // Load Nerdminer boards dynamically
+    // Load boards dynamically
     loadNerdminerBoards();
+    loadNerdaxeBoards();
+    loadNerdqaxeBoards();
+    loadBitaxeBoards();
+    loadNerdnosBoards();
   }, []);
 
   useEffect(() => {
@@ -141,7 +384,7 @@ export default function LandingHero() {
 
   const devices = device_data.devices;
   
-  // Get device data with dynamic support for Nerdminer
+  // Get device data with dynamic support for Nerdminer, Nerdaxe, NerdQaxe, and Bitaxe
   const getDeviceData = () => {
     if (selectedDevice === '') return { boards: [] };
     
@@ -151,6 +394,26 @@ export default function LandingHero() {
     if (device.name === 'Nerdminer') {
       // Return dynamic boards for Nerdminer
       return { boards: nerdminerBoards };
+    }
+    
+    if (device.name === 'Nerdaxe') {
+      // Return dynamic boards for Nerdaxe from nerdqaxe manifests
+      return { boards: nerdaxeBoards };
+    }
+    
+    if (device.name === 'NerdQaxe') {
+      // Return dynamic boards for NerdQaxe from nerdqaxe manifests  
+      return { boards: nerdqaxeBoards };
+    }
+    
+    if (device.name === 'Bitaxe') {
+      // Return dynamic boards for Bitaxe from bitaxe manifests
+      return { boards: bitaxeBoards };
+    }
+    
+    if (device.name === 'NerdNos') {
+      // Return dynamic boards for NerdNos from nerdnos manifests
+      return { boards: nerdnosBoards };
     }
     
     return device;
@@ -720,6 +983,56 @@ export default function LandingHero() {
           firmwarePath = `${basePath}/firmware/nerdminer/${version}/${boardName}_factory.bin`;
           flashAddress = 0x0000;
         }
+      } else if (selectedDevice === 'Nerdaxe' || selectedDevice === 'NerdQaxe') {
+        // For Nerdaxe and NerdQaxe, construct the path based on keep configuration setting
+        const version = selectedFirmware;
+        let deviceFileName;
+        
+        // Map display names to file names
+        if (selectedDevice === 'Nerdaxe') {
+          if (selectedBoardVersion === 'Ultra') {
+            deviceFileName = 'NerdAxe';
+          } else if (selectedBoardVersion === 'Gamma') {
+            deviceFileName = 'NerdAxeGamma';
+          }
+        } else if (selectedDevice === 'NerdQaxe') {
+          if (selectedBoardVersion === '++ (4.8THs)') {
+            deviceFileName = 'NerdQAxe++';
+          } else if (selectedBoardVersion === '+ (2.4THs)') {
+            deviceFileName = 'NerdQAxe+';
+          }
+        }
+        
+        if (keepConfiguration) {
+          // Use firmware-only file and flash to 0x10000
+          firmwarePath = `${basePath}/firmware/nerdqaxe/${version}/${deviceFileName}_firmware.bin`;
+          flashAddress = 0x10000;
+        } else {
+          // Use factory file and flash to 0x0000
+          firmwarePath = `${basePath}/firmware/nerdqaxe/${version}/${deviceFileName}_factory.bin`;
+          flashAddress = 0x0000;
+        }
+      } else if (selectedDevice === 'Bitaxe') {
+        // For Bitaxe, construct the path based on keep configuration setting
+        const version = selectedFirmware;
+        let deviceFileName;
+        
+        // Map display names to file names
+        if (selectedBoardVersion === 'Supra 401') {
+          deviceFileName = 'Supra401';
+        } else if (selectedBoardVersion === 'Gamma 601') {
+          deviceFileName = 'Gamma601';
+        }
+        
+        if (keepConfiguration) {
+          // Use firmware-only file and flash to 0x10000
+          firmwarePath = `${basePath}/firmware/bitaxe/${version}/${deviceFileName}_firmware.bin`;
+          flashAddress = 0x10000;
+        } else {
+          // Use factory file and flash to 0x0000
+          firmwarePath = `${basePath}/firmware/bitaxe/${version}/${deviceFileName}_factory.bin`;
+          flashAddress = 0x0000;
+        }
       } else {
         // For other devices, use the regular path
         firmwarePath = firmware.path;
@@ -897,8 +1210,8 @@ export default function LandingHero() {
               </div>
             </div>
             
-            {/* Keep Configuration Checkbox (only for Nerdminer) */}
-            {selectedDevice === 'Nerdminer' && (
+            {/* Keep Configuration Checkbox (for Nerdminer, Nerdaxe, NerdQaxe, and Bitaxe - NOT for NerdNos) */}
+            {(selectedDevice === 'Nerdminer' || selectedDevice === 'Nerdaxe' || selectedDevice === 'NerdQaxe' || selectedDevice === 'Bitaxe') && (
               <div className="flex flex-col items-center space-y-4 justify-center">
                 <div className="flex items-center space-x-2 justify-center">
                   <input
