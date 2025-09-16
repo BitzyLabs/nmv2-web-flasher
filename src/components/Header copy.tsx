@@ -23,8 +23,8 @@ export default function Header({ onOpenPanel }: HeaderProps) {
             <img
               src={
                 theme === 'dark'
-                  ? `${basePath}/pictures/bitzylabs-logo-dark.png`
-                  : `${basePath}/pictures/bitzylabs-logo-light.png`
+                  ? `${basePath}/pictures/bitronics-logo-dark.svg`
+                  : `${basePath}/pictures/bitronics-logo-light.svg`
               }
               alt="Bitzylabs logo"
               style={{ width: '50%' }}
