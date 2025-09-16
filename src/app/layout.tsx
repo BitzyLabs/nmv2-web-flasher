@@ -7,8 +7,8 @@ import { I18nProvider } from '../components/I18nProvider';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Bitronics flasher',
-  description: 'Flash your Bitronics devices directly from the web',
+  title: 'Bitzylabs NMV2 Flasher',
+  description: 'Flash your Bitzylabs devices directly from the web',
   icons: {
     icon: [
       {
@@ -17,8 +17,8 @@ export const metadata: Metadata = {
         type: 'image/svg+xml',
       },
     ],
-    shortcut: '/pictures/favicon.svg',
-    apple: '/pictures/favicon.svg',
+    shortcut: '/pictures/favicon.ico',
+    apple: '/pictures/favicon.ico',
   },
 };
 
