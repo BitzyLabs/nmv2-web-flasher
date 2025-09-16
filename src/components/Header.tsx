@@ -19,14 +19,14 @@ export default function Header({ onOpenPanel }: HeaderProps) {
       <div className="px-4 lg:px-6 flex items-center w-full max-w-screen-xl mx-auto">
         {/* Left section */}
         <div className="flex-1">
-          <a className="flex items-baseline " href="https://bitronics.store">
+          <a className="flex items-baseline " href="https://bitzylabs.com">
             <img
               src={
                 theme === 'dark'
                   ? `${basePath}/pictures/bitronics-logo-dark.svg`
                   : `${basePath}/pictures/bitronics-logo-light.svg`
               }
-              alt="Bitroics logo"
+              alt="Bitzylabs logo"
               style={{ width: '50%' }}
             />
           </a>
@@ -62,7 +62,7 @@ export default function Header({ onOpenPanel }: HeaderProps) {
             </Link>
             <Link
               className="text-sm font-medium hover:underline underline-offset-4"
-              href="https://bitronics.store/shop/"
+              href="https://www.ebay.com.au/itm/387772980127?"
               target="__blank"
             >
               {t('header.shop')}
