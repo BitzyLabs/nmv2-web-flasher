@@ -2,6 +2,8 @@
   "version": "v1.0.37.1",
   "boards": [
     "NerdQAxe++",
-    "NerdAxe"
+    "NerdQAxe+",
+    "NerdAxe",
+    "NerdAxeGamma"
   ]
 }
