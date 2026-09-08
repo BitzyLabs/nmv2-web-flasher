@@ -1,0 +1,120 @@
+name: Stage BitzyLabs CYD firmware
+
+on:
+  push:
+    branches: [ bitzylabs-cyd-integration ]
+    paths:
+      - '.github/workflows/sync-bitzylabs-cyd-rc.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  stage-firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out flasher integration branch
+        uses: actions/checkout@v4
+        with:
+          ref: bitzylabs-cyd-integration
+
+      - name: Check out BitzyLabs CYD firmware source
+        uses: actions/checkout@v4
+        with:
+          repository: BitzyLabs/nerdminer-cyd
+          ref: bitzylabs-cyd-phase1
+          path: _bitzy_firmware_src
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PlatformIO
+        run: pip install --upgrade platformio
+
+      - name: Build BitzyLabs CYD factory image
+        working-directory: _bitzy_firmware_src
+        run: pio run -c platformio-bitzylabs.ini -e BitzyLabs-CYD
+
+      - name: Stage RC firmware and manifests
+        env:
+          VERSION: v0.1.0-rc1
+        run: |
+          set -euo pipefail
+          FACTORY="$(find _bitzy_firmware_src/firmware -type f -name 'BitzyLabs-CYD_factory.bin' -print -quit)"
+          UPDATE="$(find _bitzy_firmware_src/firmware -type f -name 'BitzyLabs-CYD_firmware.bin' -print -quit)"
+          test -n "$FACTORY" && test -f "$FACTORY"
+          test -n "$UPDATE" && test -f "$UPDATE"
+
+          DEST="public/firmware/bitzylabs-cyd/${VERSION}"
+          mkdir -p "$DEST"
+          cp "$FACTORY" "$DEST/BitzyLabs-CYD_factory.bin"
+          cp "$UPDATE" "$DEST/BitzyLabs-CYD_firmware.bin"
+
+          cat > "$DEST/manifest.json" <<EOF
+          {
+            "version": "${VERSION}",
+            "boards": ["BitzyLabs-CYD"],
+            "source": "BitzyLabs/nerdminer-cyd",
+            "channel": "release-candidate"
+          }
+          EOF
+
+          mkdir -p public/firmware/bitzylabs-cyd
+          cat > public/firmware/bitzylabs-cyd/manifest.json <<EOF
+          {
+            "name": "BitzyLabs CYD",
+            "repository": "BitzyLabs/nerdminer-cyd",
+            "versions": ["${VERSION}"],
+            "boards": ["BitzyLabs-CYD"],
+            "channel": "release-candidate"
+          }
+          EOF
+
+      - name: Add BitzyLabs CYD device entry
+        env:
+          VERSION: v0.1.0-rc1
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+
+          p = Path('src/components/firmware_data.json')
+          data = json.loads(p.read_text())
+          version = os.environ['VERSION']
+          device = {
+              'name': 'BitzyLabs CYD',
+              'picture': 'pictures/nerdminer.png',
+              'boards': [{
+                  'name': 'ESP32-2432S028R (2.8in CYD)',
+                  'supported_firmware': [{
+                      'version': version,
+                      'path': f'firmware/bitzylabs-cyd/{version}/BitzyLabs-CYD_factory.bin'
+                  }]
+              }]
+          }
+          devices = data.setdefault('devices', [])
+          devices[:] = [d for d in devices if d.get('name') != 'BitzyLabs CYD']
+          devices.append(device)
+          p.write_text(json.dumps(data, indent=2) + '\n')
+          PY
+
+      - name: Verify flasher build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Commit staged RC to integration branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public/firmware/bitzylabs-cyd src/components/firmware_data.json
+          if git diff --cached --quiet; then
+            echo 'No staged firmware changes.'
+            exit 0
+          fi
+          git commit -m 'Stage BitzyLabs CYD v0.1.0-rc1 firmware'
+          git push origin HEAD:bitzylabs-cyd-integration
