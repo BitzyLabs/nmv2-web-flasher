@@ -32,7 +32,7 @@ jobs:
           ref: bitzylabs-cyd-integration
           fetch-depth: 0
 
-      - name: Preserve overlay and rebuild candidate from current Bitronics upstream
+      - name: Preserve overlay and synthesize latest upstream on BitzyLabs history
         shell: bash
         run: |
           set -euo pipefail
@@ -52,10 +52,24 @@ jobs:
           fi
           git fetch --no-tags bitronics main
 
-          # The candidate is disposable/generated. Starting from upstream/main
-          # instead of merging a long-lived customised branch eliminates the
-          # exact overwrite/conflict problem this workflow is designed to solve.
-          git checkout -B "$CANDIDATE_BRANCH" bitronics/main
+          # Parent the generated candidate on our own main branch, then replace
+          # its site tree with the latest Bitronics snapshot. This gives us the
+          # newest upstream code without importing upstream workflow-history
+          # commits, which GitHub correctly refuses to let an Actions token push
+          # without the separate workflows permission.
+          git checkout -B "$CANDIDATE_BRANCH" origin/main
+          git read-tree --reset -u bitronics/main
+
+          # Never inherit upstream deployment/automation definitions. Our live
+          # custom-domain deployment and maintenance workflows remain BitzyLabs'
+          # own files. This also prevents a future upstream workflow from being
+          # able to change how flasher.bitzylabs.com is deployed.
+          if git cat-file -e origin/main:.github/workflows 2>/dev/null; then
+            git restore --source=origin/main --staged --worktree -- .github/workflows
+          else
+            rm -rf .github/workflows
+            git add -A .github/workflows 2>/dev/null || true
+          fi
 
           rm -rf .bitzylabs-overlay
           mkdir -p .bitzylabs-overlay
@@ -128,7 +142,6 @@ jobs:
           manifest = {
               'version': version,
               'boards': ['BitzyLabs-CYD'],
-              # Current Bitronics UI reads this board->factory hash map.
               'sha256': {'BitzyLabs-CYD': factory_sha},
               'source': 'BitzyLabs/nerdminer-cyd',
               'sourceRef': source_ref,
@@ -220,6 +233,17 @@ jobs:
           npm ci
           npm run build
 
+      - name: Verify protected BitzyLabs workflows are unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! git diff --quiet origin/main -- .github/workflows; then
+            echo 'Refusing candidate: protected BitzyLabs workflow files changed.' >&2
+            git diff -- .github/workflows >&2 || true
+            exit 1
+          fi
+          echo 'Protected BitzyLabs workflows unchanged.'
+
       - name: Commit generated candidate
         shell: bash
         run: |
@@ -227,7 +251,7 @@ jobs:
           rm -rf _bitzy_firmware_src
 
           git add -A
-          SOURCE_SHA="$(git -C "$GITHUB_WORKSPACE" rev-parse --short=12 bitronics/main)"
+          SOURCE_SHA="$(git rev-parse --short=12 bitronics/main)"
           FIRMWARE_SHA="$(git ls-remote https://github.com/${BITZY_FIRMWARE_REPO}.git ${BITZY_FIRMWARE_REF} | awk '{print substr($1,1,12)}')"
 
           if git diff --cached --quiet; then
@@ -236,7 +260,6 @@ jobs:
             git commit -m "Build BitzyLabs candidate on Bitronics ${SOURCE_SHA} / firmware ${FIRMWARE_SHA}"
           fi
 
-          # This is a generated, non-production branch. It is deliberately
-          # replaced atomically each run; main and the live Pages deployment
-          # are never touched by this workflow.
+          # Generated, non-production branch only. Live main and Pages are not
+          # modified by this workflow.
           git push --force origin HEAD:"$CANDIDATE_BRANCH"
