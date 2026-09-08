@@ -27,7 +27,7 @@
     },
     {
       "name": "BitzyLabs CYD",
-      "picture": "pictures/nerdminer.png",
+      "picture": "pictures/bitzylabs-cyd.webp",
       "boards": [
         {
           "name": "ESP32-2432S028R (2.8in CYD)",

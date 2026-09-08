@@ -1,7 +1,11 @@
 {
   "name": "BitzyLabs CYD",
   "repository": "BitzyLabs/nerdminer-cyd",
-  "versions": ["v0.1.0-rc1"],
-  "boards": ["BitzyLabs-CYD"],
+  "versions": [
+    "v0.1.0-rc1"
+  ],
+  "boards": [
+    "BitzyLabs-CYD"
+  ],
   "channel": "release-candidate"
 }
