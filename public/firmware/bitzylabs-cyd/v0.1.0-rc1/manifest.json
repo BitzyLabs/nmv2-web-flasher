@@ -1,0 +1,25 @@
+{
+  "version": "v0.1.0-rc1",
+  "boards": [
+    "BitzyLabs-CYD"
+  ],
+  "sha256": {
+    "BitzyLabs-CYD": "fb991c1f23c1569ddcc29fad4edb46dfec86d21ae0429bc8100584aa2795b23b"
+  },
+  "source": "BitzyLabs/nerdminer-cyd",
+  "sourceRef": "bitzylabs-cyd-phase1",
+  "sourceCommit": "19b2b789dc48505ad6478b93a447e6c3c4c95797",
+  "channel": "release-candidate",
+  "files": {
+    "factory": {
+      "name": "BitzyLabs-CYD_factory.bin",
+      "sha256": "fb991c1f23c1569ddcc29fad4edb46dfec86d21ae0429bc8100584aa2795b23b",
+      "size": 1425408
+    },
+    "update": {
+      "name": "BitzyLabs-CYD_firmware.bin",
+      "sha256": "c175088ee7bde75232d2fd4f90c4a963efaec76418ab533f6c3a89a78d23b638",
+      "size": 1359200
+    }
+  }
+}
