@@ -24,6 +24,21 @@
       "name": "NerdNos",
       "picture": "pictures/nerdnos.png",
       "boards": []
+    },
+    {
+      "name": "BitzyLabs CYD",
+      "picture": "pictures/nerdminer.png",
+      "boards": [
+        {
+          "name": "ESP32-2432S028R (2.8in CYD)",
+          "supported_firmware": [
+            {
+              "version": "v0.1.0-rc1",
+              "path": "firmware/bitzylabs-cyd/v0.1.0-rc1/BitzyLabs-CYD_factory.bin"
+            }
+          ]
+        }
+      ]
     }
   ]
 }
