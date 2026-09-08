@@ -5,10 +5,20 @@ on:
     branches: [ bitzylabs-cyd-integration ]
     paths:
       - '.github/workflows/sync-bitzylabs-cyd-rc.yml'
+      - '.bitzylabs-overlay/**'
   workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: bitzylabs-cyd-integration
+  cancel-in-progress: true
+
+env:
+  BITZY_VERSION: v0.1.0-rc1
+  BITZY_FIRMWARE_REPO: BitzyLabs/nerdminer-cyd
+  BITZY_FIRMWARE_REF: bitzylabs-cyd-phase1
 
 jobs:
   stage-firmware:
@@ -18,12 +28,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: bitzylabs-cyd-integration
+          fetch-depth: 0
 
       - name: Check out BitzyLabs CYD firmware source
         uses: actions/checkout@v4
         with:
-          repository: BitzyLabs/nerdminer-cyd
-          ref: bitzylabs-cyd-phase1
+          repository: ${{ env.BITZY_FIRMWARE_REPO }}
+          ref: ${{ env.BITZY_FIRMWARE_REF }}
           path: _bitzy_firmware_src
           fetch-depth: 0
 
@@ -35,48 +46,93 @@ jobs:
       - name: Install PlatformIO
         run: pip install --upgrade platformio
 
-      - name: Build BitzyLabs CYD factory image
+      - name: Build corrected BitzyLabs CYD images
         working-directory: _bitzy_firmware_src
         run: pio run -c platformio-bitzylabs.ini -e BitzyLabs-CYD
 
-      - name: Stage RC firmware and manifests
-        env:
-          VERSION: v0.1.0-rc1
+      - name: Stage firmware and manifests
+        shell: bash
         run: |
           set -euo pipefail
+
           FACTORY="$(find _bitzy_firmware_src/firmware -type f -name 'BitzyLabs-CYD_factory.bin' -print -quit)"
           UPDATE="$(find _bitzy_firmware_src/firmware -type f -name 'BitzyLabs-CYD_firmware.bin' -print -quit)"
           test -n "$FACTORY" && test -f "$FACTORY"
           test -n "$UPDATE" && test -f "$UPDATE"
 
-          DEST="public/firmware/bitzylabs-cyd/${VERSION}"
+          DEST="public/firmware/bitzylabs-cyd/${BITZY_VERSION}"
+          rm -rf "$DEST"
           mkdir -p "$DEST"
           cp "$FACTORY" "$DEST/BitzyLabs-CYD_factory.bin"
           cp "$UPDATE" "$DEST/BitzyLabs-CYD_firmware.bin"
 
-          cat > "$DEST/manifest.json" <<EOF
-          {
-            "version": "${VERSION}",
-            "boards": ["BitzyLabs-CYD"],
-            "source": "BitzyLabs/nerdminer-cyd",
-            "channel": "release-candidate"
-          }
-          EOF
+          SOURCE_SHA="$(git -C _bitzy_firmware_src rev-parse HEAD)"
+          FACTORY_SHA="$(sha256sum "$DEST/BitzyLabs-CYD_factory.bin" | awk '{print $1}')"
+          UPDATE_SHA="$(sha256sum "$DEST/BitzyLabs-CYD_firmware.bin" | awk '{print $1}')"
 
-          mkdir -p public/firmware/bitzylabs-cyd
-          cat > public/firmware/bitzylabs-cyd/manifest.json <<EOF
-          {
-            "name": "BitzyLabs CYD",
-            "repository": "BitzyLabs/nerdminer-cyd",
-            "versions": ["${VERSION}"],
-            "boards": ["BitzyLabs-CYD"],
-            "channel": "release-candidate"
-          }
-          EOF
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
 
-      - name: Add BitzyLabs CYD device entry
-        env:
-          VERSION: v0.1.0-rc1
+          version = os.environ['BITZY_VERSION']
+          dest = Path('public/firmware/bitzylabs-cyd') / version
+          source_sha = os.popen('git -C _bitzy_firmware_src rev-parse HEAD').read().strip()
+
+          import hashlib
+          def sha256(path):
+              h = hashlib.sha256()
+              with open(path, 'rb') as f:
+                  for chunk in iter(lambda: f.read(1024 * 1024), b''):
+                      h.update(chunk)
+              return h.hexdigest()
+
+          factory = dest / 'BitzyLabs-CYD_factory.bin'
+          update = dest / 'BitzyLabs-CYD_firmware.bin'
+          manifest = {
+              'version': version,
+              'boards': ['BitzyLabs-CYD'],
+              'source': 'BitzyLabs/nerdminer-cyd',
+              'sourceRef': os.environ['BITZY_FIRMWARE_REF'],
+              'sourceCommit': source_sha,
+              'channel': 'release-candidate',
+              'files': {
+                  'factory': {
+                      'name': factory.name,
+                      'sha256': sha256(factory),
+                      'size': factory.stat().st_size,
+                  },
+                  'update': {
+                      'name': update.name,
+                      'sha256': sha256(update),
+                      'size': update.stat().st_size,
+                  },
+              },
+          }
+          (dest / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
+
+          root = Path('public/firmware/bitzylabs-cyd')
+          (root / 'manifest.json').write_text(json.dumps({
+              'name': 'BitzyLabs CYD',
+              'repository': 'BitzyLabs/nerdminer-cyd',
+              'versions': [version],
+              'boards': ['BitzyLabs-CYD'],
+              'channel': 'release-candidate',
+          }, indent=2) + '\n')
+          PY
+
+          echo "Factory SHA256: $FACTORY_SHA"
+          echo "Update SHA256:  $UPDATE_SHA"
+
+      - name: Restore approved BitzyLabs selector artwork
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p public/pictures
+          base64 --decode .bitzylabs-overlay/assets/bitzylabs-cyd-selector.webp.b64 > public/pictures/bitzylabs-cyd.webp
+          test -s public/pictures/bitzylabs-cyd.webp
+          file public/pictures/bitzylabs-cyd.webp
+
+      - name: Apply BitzyLabs device overlay
         run: |
           python - <<'PY'
           import json, os
@@ -84,10 +140,11 @@ jobs:
 
           p = Path('src/components/firmware_data.json')
           data = json.loads(p.read_text())
-          version = os.environ['VERSION']
+          version = os.environ['BITZY_VERSION']
+
           device = {
               'name': 'BitzyLabs CYD',
-              'picture': 'pictures/nerdminer.png',
+              'picture': 'pictures/bitzylabs-cyd.webp',
               'boards': [{
                   'name': 'ESP32-2432S028R (2.8in CYD)',
                   'supported_firmware': [{
@@ -96,25 +153,60 @@ jobs:
                   }]
               }]
           }
+
           devices = data.setdefault('devices', [])
           devices[:] = [d for d in devices if d.get('name') != 'BitzyLabs CYD']
           devices.append(device)
           p.write_text(json.dumps(data, indent=2) + '\n')
           PY
 
-      - name: Verify flasher build
+      - name: Validate overlay invariants
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          data = json.loads(Path('src/components/firmware_data.json').read_text())
+          matches = [d for d in data['devices'] if d.get('name') == 'BitzyLabs CYD']
+          assert len(matches) == 1, f'expected exactly one BitzyLabs CYD entry, got {len(matches)}'
+          device = matches[0]
+          assert device['picture'] == 'pictures/bitzylabs-cyd.webp'
+          fw = device['boards'][0]['supported_firmware'][0]
+          assert Path('public/' + fw['path']).is_file(), fw['path']
+          assert Path('public/pictures/bitzylabs-cyd.webp').stat().st_size > 1000
+          manifest = json.loads(Path('public/firmware/bitzylabs-cyd/v0.1.0-rc1/manifest.json').read_text())
+          assert manifest['files']['factory']['size'] > 1_000_000
+          assert manifest['files']['update']['size'] > 1_000_000
+          print('BitzyLabs overlay invariants OK')
+          PY
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Verify flasher production build
         run: |
           npm ci
           npm run build
 
       - name: Commit staged RC to integration branch
+        shell: bash
         run: |
+          set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add public/firmware/bitzylabs-cyd src/components/firmware_data.json
+          git add \
+            public/firmware/bitzylabs-cyd \
+            public/pictures/bitzylabs-cyd.webp \
+            src/components/firmware_data.json
+
           if git diff --cached --quiet; then
-            echo 'No staged firmware changes.'
+            echo 'No generated BitzyLabs overlay changes.'
             exit 0
           fi
-          git commit -m 'Stage BitzyLabs CYD v0.1.0-rc1 firmware'
+
+          SOURCE_SHA="$(git -C _bitzy_firmware_src rev-parse --short=12 HEAD)"
+          git commit -m "Stage BitzyLabs CYD ${BITZY_VERSION} (${SOURCE_SHA})"
           git push origin HEAD:bitzylabs-cyd-integration
