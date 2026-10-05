@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-03T07:24:44.326Z",
+  "generatedAt": "2026-10-05T08:03:54.745Z",
   "projects": [
     {
       "repo": "bitaxeorg/ESP-Miner",
@@ -36,19 +36,19 @@
       "url": "https://github.com/shufps/ESP-Miner-NerdQAxePlus/releases",
       "releases": [
         {
+          "tag": "v1.1.1-alpha4",
+          "name": "v1.1.1-alpha4",
+          "published": "2026-10-05T06:31:52Z",
+          "prerelease": true,
+          "url": "https://github.com/shufps/ESP-Miner-NerdQAxePlus/releases/tag/v1.1.1-alpha4",
+          "summary": "NerdAxeGaia board (BM1373) with Gaia theme by @BitMaker-hub in https://github.com/shufps/ESP-Miner-NerdQAxePlus/pull/718"
+        },
+        {
           "tag": "v1.1.1-alpha3",
           "name": "v1.1.1-alpha3",
           "published": "2026-10-02T07:55:55Z",
           "prerelease": true,
           "url": "https://github.com/shufps/ESP-Miner-NerdQAxePlus/releases/tag/v1.1.1-alpha3",
-          "summary": "⚠️ **Diagnostic build**: this pre-release has panic core dumps enabled, so the dump can be downloaded via `/api/system/coredump` and the System page. A dump may contain sensitive data such as your WiFi password and pool credentials, and wit"
-        },
-        {
-          "tag": "v1.1.1-alpha2",
-          "name": "v1.1.1-alpha2",
-          "published": "2026-10-01T16:35:50Z",
-          "prerelease": true,
-          "url": "https://github.com/shufps/ESP-Miner-NerdQAxePlus/releases/tag/v1.1.1-alpha2",
           "summary": "⚠️ **Diagnostic build**: this pre-release has panic core dumps enabled, so the dump can be downloaded via `/api/system/coredump` and the System page. A dump may contain sensitive data such as your WiFi password and pool credentials, and wit"
         }
       ]
