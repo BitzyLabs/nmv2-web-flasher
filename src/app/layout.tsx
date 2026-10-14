@@ -8,8 +8,8 @@ import { I18nProvider } from '../components/I18nProvider';
 // every deploy depend on fonts.gstatic.com answering — and one day it did not.
 
 export const metadata: Metadata = {
-  title: 'Bitronics flasher',
-  description: 'Flash your Bitronics devices directly from the web',
+  title: 'Bitzy Labs Flasher',
+  description: 'Flash your mining hardware directly from the web',
   icons: {
     icon: [
       {

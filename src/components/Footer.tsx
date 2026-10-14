@@ -13,11 +13,7 @@ const FIRMWARE_LINKS = [
 ];
 
 const SITE_LINKS = [
-  { label: 'Shop', href: 'https://bitronics.store/collections/best-sellers' },
-  { label: 'Pool', href: 'https://pool.bitronics.store' },
-  { label: 'Wiki', href: 'https://bitronics.store/pages/knowledge-base' },
-  { label: 'Blog', href: 'https://bitronics.store/blogs/knowledge-base' },
-  { label: 'Contact', href: 'https://bitronics.store/pages/contact-form' },
+  { label: 'Shop', href: 'https://www.bitzylabs.com' },
 ];
 
 function Notice({ title, body, onClose }: { title: string; body: string; onClose: () => void }) {
@@ -65,9 +61,9 @@ export default function Footer() {
           <div>
             <div className="flex items-center gap-2.5">
               <img
-                src={`${basePath}/pictures/bitronics-logo-dark.svg`}
-                alt="Bitronics"
-                className="h-6 w-auto"
+                src={`${basePath}/pictures/bitzylabs-logo-dark.png`}
+                alt="Bitzy Labs"
+                className="h-7 w-auto object-contain"
               />
               <span className="brand-badge">Flasher</span>
             </div>
@@ -95,7 +91,7 @@ export default function Footer() {
           </div>
 
           <div>
-            <h3 className="font-display text-sm font-bold tracking-tight">Bitronics</h3>
+            <h3 className="font-display text-sm font-bold tracking-tight">BitzyLabs</h3>
             <ul className="mt-4 space-y-2.5">
               {SITE_LINKS.map((link) => (
                 <li key={link.label}>
@@ -116,7 +112,7 @@ export default function Footer() {
         <div className="border-t border-[var(--color-hairline)]">
           <div className="mx-auto flex w-full max-w-screen-xl flex-col-reverse items-center gap-3 px-4 py-5 text-xs text-white/40 sm:flex-row sm:justify-between lg:px-6">
             <div className="flex items-center gap-4">
-              <span>© {new Date().getFullYear()} Bitronics</span>
+              <span>© {new Date().getFullYear()} BitzyLabs</span>
               <button
                 onClick={() => setNotice('terms')}
                 className="transition-colors hover:text-white/70"

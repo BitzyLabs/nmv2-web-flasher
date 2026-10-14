@@ -92,13 +92,13 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  /* Bitronics design system, kept in step with the store theme's brand.css.
-     Rules that come with it: one accent per block, gold is a hit and not a
-     background, mono only for figures, and gold is never text on a light
-     surface (there it is a fill or a border). */
-  --color-bitronics: #ECD400;      /* brand gold */
-  --color-gold-ink: #4A4200;       /* text placed on gold */
-  --color-gold-deep: #7A6D00;      /* gold that stays legible on light */
+  /* Bitzy Labs palette on upstream's structure. The accent rules survive:
+     one accent per block, crimson is a hit and not a background, mono only
+     for figures, and crimson is never text on a light surface (there it is
+     a fill or a border). */
+  --color-bitronics: #DB092A;     /* brand crimson, sampled from the logo */
+  --color-gold-ink: #FFFFFF;       /* text placed on crimson */
+  --color-gold-deep: #B00722;      /* crimson that stays legible on light */
   --color-bitcoin: #F7931A;        /* figures and values only */
   --color-surface: #161618;        /* cards */
   --color-chrome: #1B1B1D;         /* header and footer */
@@ -450,7 +450,7 @@ body {
   content: '— ';
 }
 
-/* The BITRONICS + FLASHER lockup, the same shape as the POOL badge */
+/* The Bitzy Labs + FLASHER lockup */
 .brand-badge {
   font-family: 'M PLUS 1 Code', ui-monospace, SFMono-Regular, monospace;
   background: var(--color-bitronics);

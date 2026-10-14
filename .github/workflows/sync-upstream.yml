@@ -1,0 +1,70 @@
+name: Sync upstream
+
+# Keeps this fork a faithful copy of BitMaker-hub/bitronics-web-flasher with
+# the BitzyLabs branding laid back on top.
+#
+# The old replica kept drifting and eventually stopped building, so the tree
+# was reset to upstream by hand. This workflow makes that reset repeatable:
+# it hard-resets main to upstream, restores our tooling from the pre-reset
+# commit, re-applies the branding and pushes. Upstream is pulled daily, a
+# little after the firmware bot so the two jobs do not collide.
+
+on:
+  schedule:
+    - cron: '30 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Point at upstream
+        run: |
+          if git remote get-url upstream >/dev/null 2>&1; then
+            git remote set-url upstream https://github.com/BitMaker-hub/bitronics-web-flasher.git
+          else
+            git remote add upstream https://github.com/BitMaker-hub/bitronics-web-flasher.git
+          fi
+
+      - name: Sync and re-brand
+        run: ./scripts/sync-upstream.sh
+
+      - name: Commit and push
+        id: push
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Already in step with upstream; nothing to push."
+            exit 0
+          fi
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add -A
+          SHA=$(git rev-parse upstream/main 2>/dev/null || echo unknown)
+          git commit -m "chore: sync with upstream ${SHA:0:12} and re-brand" \
+                      -m "Branding re-applied by scripts/apply-bitzylabs-branding.py"
+          git push origin main
+
+      # A push made with GITHUB_TOKEN deliberately does not start other
+      # workflows, so the deployment that should follow this commit has to be
+      # asked for directly. Without this step the sync would land on main and
+      # the live site would keep serving whatever was deployed before it.
+      - name: Trigger deployment
+        if: steps.push.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run "Deploy Next.js site to Pages" --ref main

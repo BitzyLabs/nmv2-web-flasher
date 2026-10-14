@@ -2,8 +2,6 @@
 
 import Footer from '@/components/Footer'
 import LandingHero from '@/components/LandingHero'
-import Features from '@/components/Features'
-import Releases from '@/components/Releases'
 import ShopStrip from '@/components/ShopStrip'
 
 // Dark hero, gold strip, light band, dark band, dark footer. The page alternates
@@ -14,8 +12,6 @@ export default function Home() {
       <main className="flex-1">
         <LandingHero />
         <ShopStrip />
-        <Features />
-        <Releases />
       </main>
       <Footer />
     </div>

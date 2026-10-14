@@ -49,7 +49,7 @@ export default function BoardVersionSelector({
           <SelectItem key={val} value={val}>
             <span className={mono ? 'font-data' : undefined}>{val}</span>
             {markFirstAsLatest && index === 0 && (
-              <span className="ml-2 rounded bg-bitronics px-1.5 py-0.5 text-[10px] font-semibold text-[#4A4200] align-middle">
+              <span className="ml-2 rounded bg-bitronics px-1.5 py-0.5 text-[10px] font-semibold text-white align-middle">
                 Latest
               </span>
             )}

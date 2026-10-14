@@ -45,6 +45,13 @@ jobs:
           # workflow_run starts from the default branch as it was when the run
           # was queued, which is not necessarily the firmware commit to ship.
           ref: main
+      # Every deploy is re-branded here rather than trusting the committed
+      # tree: the firmware bot pushes straight to main with the repository's
+      # token, and nothing stops a future sync from landing an unpatched
+      # commit. A build that ships Bitronics branding on flasher.bitzylabs.com
+      # is the one failure this fork cannot have.
+      - name: Apply BitzyLabs branding
+        run: python3 scripts/apply-bitzylabs-branding.py
       - name: Detect package manager
         id: detect-package-manager
         run: |

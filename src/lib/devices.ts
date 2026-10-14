@@ -87,7 +87,7 @@ export const CATEGORIES: { id: DeviceCategory; title: string; blurb: string }[] 
   },
 ];
 
-const SHOP = 'https://bitronics.store/collections';
+const SHOP = 'https://www.bitzylabs.com';
 
 export const NERDMINER_ORIGINAL = 'NerdMinerV2 original board (T-Display-S3)';
 
@@ -182,7 +182,7 @@ export const DEVICE_SOURCES: DeviceSource[] = [
         },
         {
           title: 'Or start from one that is already signed',
-          body: 'Units sold pre-flashed by Bitronics run Secure Boot v2: only firmware signed with our key boots. That proves the firmware is the one we signed, not that it is good — the checks above are what prove that. A unit you build yourself stays completely open, with no lock of any kind.',
+          body: 'Units sold pre-flashed by BitzyLabs run Secure Boot v2: only firmware signed with our key boots. That proves the firmware is the one we signed, not that it is good — the checks above are what prove that. A unit you build yourself stays completely open, with no lock of any kind.',
         },
       ],
       cta: {

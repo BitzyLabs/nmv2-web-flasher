@@ -5,10 +5,7 @@ const basePath = '';
 // The store's own sections, so the flasher reads as another room of the same
 // house rather than a tool that happens to share a logo.
 const SITE_LINKS = [
-  { label: 'Shop', href: 'https://bitronics.store/collections/best-sellers' },
-  { label: 'Pool', href: 'https://pool.bitronics.store' },
-  { label: 'Wiki', href: 'https://bitronics.store/pages/knowledge-base' },
-  { label: 'Blog', href: 'https://bitronics.store/blogs/knowledge-base' },
+  { label: 'Shop', href: 'https://www.bitzylabs.com' },
 ];
 
 interface HeaderProps {
@@ -21,16 +18,16 @@ export default function Header({ onOpenPanel }: HeaderProps) {
   return (
     <header className="h-20 header-custom">
       <div className="mx-auto flex h-full w-full max-w-screen-xl items-center px-4 lg:px-6">
-        {/* The BITRONICS + FLASHER lockup, the same shape the pool site uses */}
+        {/* The Bitzy Labs + FLASHER lockup */}
         <a
-          href="https://bitronics.store"
+          href="https://www.bitzylabs.com"
           className="flex flex-1 items-center gap-3 transition-opacity hover:opacity-80"
         >
           {/* The bar is always dark, so the wordmark is always the light one */}
           <img
-            src={`${basePath}/pictures/bitronics-logo-dark.svg`}
-            alt="Bitronics"
-            className="h-7 w-auto"
+            src={`${basePath}/pictures/bitzylabs-logo-dark.png`}
+            alt="Bitzy Labs"
+            className="h-8 w-auto object-contain"
           />
           <span className="brand-badge">Flasher</span>
         </a>
