@@ -4,10 +4,14 @@ name: Sync upstream
 # the BitzyLabs branding laid back on top.
 #
 # The old replica kept drifting and eventually stopped building, so the tree
-# was reset to upstream by hand. This workflow makes that reset repeatable:
-# it hard-resets main to upstream, restores our tooling from the pre-reset
-# commit, re-applies the branding and pushes. Upstream is pulled daily, a
-# little after the firmware bot so the two jobs do not collide.
+# was resynced to upstream by hand. This workflow makes that repeatable: it
+# merges upstream in (upstream wins wherever both sides edited the same line),
+# restores our tooling from the pre-sync commit, re-applies the branding,
+# build-checks the result and pushes. The push is a fast-forward because it is
+# a merge -- a hard reset would rewrite main and be rejected every night.
+#
+# Upstream is pulled daily, a little after the firmware bot so the two jobs do
+# not collide.
 
 on:
   schedule:
@@ -31,15 +35,7 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Point at upstream
-        run: |
-          if git remote get-url upstream >/dev/null 2>&1; then
-            git remote set-url upstream https://github.com/BitMaker-hub/bitronics-web-flasher.git
-          else
-            git remote add upstream https://github.com/BitMaker-hub/bitronics-web-flasher.git
-          fi
-
-      # The sync script builds the site to prove the reset did not break it.
+      # The sync script builds the site to prove the merge did not break it.
       # Pin the same Node the deploy uses so a runner image bump cannot make
       # the 3am sync fail for reasons that have nothing to do with upstream.
       - name: Setup Node
@@ -48,32 +44,28 @@ jobs:
           node-version: "20"
           cache: npm
 
+      # The script does everything: fetch, merge, restore tooling, re-brand,
+      # build-check, commit and push. HEAD before and after is the only honest
+      # signal that anything happened -- a quiet night exits without moving it.
       - name: Sync and re-brand
-        run: ./scripts/sync-upstream.sh
-
-      - name: Commit and push
-        id: push
+        id: sync
         run: |
-          if git diff --quiet; then
+          BEFORE=$(git rev-parse HEAD)
+          ./scripts/sync-upstream.sh --push
+          AFTER=$(git rev-parse HEAD)
+          if [ "$BEFORE" != "$AFTER" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
             echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "Already in step with upstream; nothing to push."
-            exit 0
+            echo "Already in step with upstream; nothing to deploy."
           fi
-          echo "changed=true" >> "$GITHUB_OUTPUT"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git config user.name "github-actions[bot]"
-          git add -A
-          SHA=$(git rev-parse upstream/main 2>/dev/null || echo unknown)
-          git commit -m "chore: sync with upstream ${SHA:0:12} and re-brand" \
-                      -m "Branding re-applied by scripts/apply-bitzylabs-branding.py"
-          git push origin main
 
       # A push made with GITHUB_TOKEN deliberately does not start other
       # workflows, so the deployment that should follow this commit has to be
       # asked for directly. Without this step the sync would land on main and
       # the live site would keep serving whatever was deployed before it.
       - name: Trigger deployment
-        if: steps.push.outputs.changed == 'true'
+        if: steps.sync.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh workflow run "Deploy Next.js site to Pages" --ref main
