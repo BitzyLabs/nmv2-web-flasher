@@ -13,10 +13,22 @@ It is designed to be run twice:
     Bitronics branding even if somebody pushes an unpatched commit straight
     to main (the firmware bot does exactly that, daily).
 
-Every replacement is anchored on the exact upstream text it expects. If
-upstream has restructured a file the anchor no longer matches, the script
-stops and says which file and which anchor -- it will not guess, because a
-half-applied rebrand that builds cleanly is far worse than a failed build.
+Two kinds of edit, deliberately held to different standards:
+
+  * Structure -- the logo, the sections, the palette -- is anchored on the
+    exact upstream text. If the anchor is gone the script stops and names it,
+    because a half-applied rebrand that builds cleanly is far worse than a
+    failed build.
+  * Anything upstream rewrites constantly -- device lists, buy links, prose --
+    is matched as a pattern instead. Upstream adds a board to devices.ts
+    every few weeks; that must never be able to break a deploy. Patterns that
+    no longer match mean there is nothing to do, not that the script is stale.
+
+What ties them together is validation: it runs last and asserts the *end
+state* (no Bitronics URL, no Bitronics title, our logo, our palette, the
+sections gone). A patch that quietly finds nothing to do can only get past it
+if the result is genuinely correct, so failing to match an anchor cannot
+leak Bitronics branding into a build.
 
 Idempotent: running it on an already-patched tree is a no-op.
 
@@ -29,6 +41,7 @@ Exit codes: 0 clean / patched, 1 anchor missing or validation failed.
 from __future__ import annotations
 
 import argparse
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -51,6 +64,13 @@ LOGO_LIGHT = "bitzylabs-logo-light.png"  # crimson mark + ink wordmark
 
 # Every string that must not survive into a deploy.
 FORBIDDEN = ("bitronics.store", "#ECD400", "#4A4200", "#7A6D00")
+
+# Any Bitronics URL, however it was written: subdomain, path, query. Anchored
+# on the domain rather than on surrounding code so upstream restructuring a
+# component cannot slip a new link past it.
+BITRONICS_URL = re.compile(
+    r"""https?://(?:[a-z0-9-]+\.)*bitronics\.store[^\s'"`)\\]*""", re.IGNORECASE
+)
 
 
 class PatchError(RuntimeError):
@@ -84,6 +104,16 @@ def replace_once(path: Path, old: str, new: str, *, required: bool = True) -> bo
         )
     path.write_text(text.replace(old, new, 1))
     return True
+
+
+def replace_if_present(path: Path, old: str, new: str) -> bool:
+    """Replace `old` with `new`, but stay quiet when `old` is simply gone.
+
+    Used where upstream may reasonably reword the text: a missing anchor then
+    means there is nothing left to rebrand, which is the outcome we wanted.
+    Validation decides whether the end state is acceptable either way.
+    """
+    return replace_once(path, old, new, required=False)
 
 
 def drop_lines(path: Path, predicate) -> bool:
@@ -129,7 +159,10 @@ def patch_assets() -> None:
 
 def patch_header() -> None:
     path = ROOT / "src" / "components" / "Header.tsx"
-    changed = replace_once(
+    # The nav and the logo's own href may be reworded freely -- the sweep
+    # catches their URLs whatever they are -- but the logo itself is
+    # structural: miss it and the site renders a wordmark we just deleted.
+    changed = replace_if_present(
         path,
         "  { label: 'Shop', href: 'https://bitronics.store/collections/best-sellers' },\n"
         "  { label: 'Pool', href: 'https://pool.bitronics.store' },\n"
@@ -137,7 +170,7 @@ def patch_header() -> None:
         "  { label: 'Blog', href: 'https://bitronics.store/blogs/knowledge-base' },\n",
         f"  {{ label: 'Shop', href: '{SITE}' }},\n",
     )
-    changed |= replace_once(path, 'href="https://bitronics.store"', f'href="{SITE}"')
+    changed |= replace_if_present(path, 'href="https://bitronics.store"', f'href="{SITE}"')
     changed |= replace_once(
         path,
         "            src={`${basePath}/pictures/bitronics-logo-dark.svg`}\n"
@@ -147,7 +180,7 @@ def patch_header() -> None:
         f'            alt="{BRAND}"\n'
         '            className="h-8 w-auto object-contain"\n',
     )
-    changed |= replace_once(
+    changed |= replace_if_present(
         path,
         "{/* The BITRONICS + FLASHER lockup, the same shape the pool site uses */}",
         "{/* The Bitzy Labs + FLASHER lockup */}",
@@ -157,7 +190,7 @@ def patch_header() -> None:
 
 def patch_footer() -> None:
     path = ROOT / "src" / "components" / "Footer.tsx"
-    changed = replace_once(
+    changed = replace_if_present(
         path,
         "  { label: 'Shop', href: 'https://bitronics.store/collections/best-sellers' },\n"
         "  { label: 'Pool', href: 'https://pool.bitronics.store' },\n"
@@ -175,17 +208,62 @@ def patch_footer() -> None:
         f'                alt="{BRAND}"\n'
         '                className="h-7 w-auto object-contain"\n',
     )
-    changed |= replace_once(path, ">Bitronics</h3>", ">BitzyLabs</h3>")
-    changed |= replace_once(
+    changed |= replace_if_present(path, ">Bitronics</h3>", ">BitzyLabs</h3>")
+    changed |= replace_if_present(
         path, "<span>© {new Date().getFullYear()} Bitronics</span>",
         "<span>© {new Date().getFullYear()} BitzyLabs</span>",
     )
-    note(changed, "Footer.tsx: logo, site links, copyright")
+    # The firmware column credits other projects' repos rather than linking to
+    # Bitronics, but it is a column of the store's navigation and it goes with
+    # the rest of the navigation. The comment goes with the array: without the
+    # links beneath it, "where each firmware actually comes from" says nothing.
+    changed |= replace_if_present(
+        path,
+        "// Where each firmware actually comes from. Saying so in the footer is the\n"
+        "// cheapest form of honesty: this site only re-serves other people's builds.\n",
+        "",
+    )
+    changed |= replace_once(
+        path,
+        "const FIRMWARE_LINKS = [\n"
+        "  { label: 'Bitaxe', href: 'https://github.com/bitaxeorg/ESP-Miner' },\n"
+        "  { label: 'NerdQaxe & Octaxe', href: 'https://github.com/shufps/ESP-Miner-NerdQAxePlus' },\n"
+        "  { label: 'NerdMiner', href: 'https://github.com/BitMaker-hub/NerdMiner_v2' },\n"
+        "  { label: 'Seeder', href: 'https://github.com/BitMaker-hub/Seeder' },\n"
+        "];\n"
+        "\n",
+        "",
+    )
+    changed |= replace_once(
+        path,
+        "          <div>\n"
+        "            <h3 className=\"font-display text-sm font-bold tracking-tight\">Firmware</h3>\n"
+        "            <ul className=\"mt-4 space-y-2.5\">\n"
+        "              {FIRMWARE_LINKS.map((link) => (\n"
+        "                <li key={link.label}>\n"
+        "                  <a\n"
+        "                    href={link.href}\n"
+        "                    target=\"_blank\"\n"
+        "                    rel=\"noopener noreferrer\"\n"
+        "                    className={linkClass}\n"
+        "                  >\n"
+        "                    {link.label}\n"
+        "                  </a>\n"
+        "                </li>\n"
+        "              ))}\n"
+        "            </ul>\n"
+        "          </div>\n"
+        "\n",
+        "",
+    )
+    # Two columns remain, so two columns is what the grid must ask for.
+    changed |= replace_once(path, "md:grid-cols-3", "md:grid-cols-2")
+    note(changed, "Footer.tsx: logo, site links, copyright, firmware column dropped")
 
 
 def patch_shop_strip() -> None:
     path = ROOT / "src" / "components" / "ShopStrip.tsx"
-    changed = replace_once(
+    changed = replace_if_present(
         path, 'href="https://bitronics.store/collections/best-sellers"', f'href="{SITE}"'
     )
     note(changed, "ShopStrip.tsx: 'Rather not build one' link -> BitzyLabs")
@@ -220,10 +298,10 @@ def patch_page() -> None:
 
 def patch_layout() -> None:
     path = ROOT / "src" / "app" / "layout.tsx"
-    changed = replace_once(
+    changed = replace_if_present(
         path, "title: 'Bitronics flasher',", f"title: '{BRAND} Flasher',"
     )
-    changed |= replace_once(
+    changed |= replace_if_present(
         path,
         "description: 'Flash your Bitronics devices directly from the web',",
         "description: 'Flash your mining hardware directly from the web',",
@@ -232,25 +310,42 @@ def patch_layout() -> None:
 
 
 def patch_palette() -> None:
+    """One line per colour rather than the whole block.
+
+    Upstream rewrites comments; they restate rarely, if ever. Anchoring each
+    value alone means a reworded comment above them cannot stop the palette
+    from being patched, while a genuinely changed value still fails loudly.
+    """
     path = ROOT / "src" / "app" / "globals.css"
     changed = replace_once(
+        path, "--color-bitronics: #ECD400;", f"--color-bitronics: {CRIMSON};"
+    )
+    changed |= replace_once(
+        path, "--color-gold-ink: #4A4200;", f"--color-gold-ink: {INK_ON_CRIMSON};"
+    )
+    changed |= replace_once(
+        path, "--color-gold-deep: #7A6D00;", f"--color-gold-deep: {CRIMSON_DEEP};"
+    )
+    # Comments only: upstream is free to restate them, the colours are not.
+    # Whole block first, then the opening line on its own, so a reworded
+    # middle line leaves the rest of upstream's wording behind.
+    changed |= replace_if_present(
         path,
         "  /* Bitronics design system, kept in step with the store theme's brand.css.\n"
         "     Rules that come with it: one accent per block, gold is a hit and not a\n"
         "     background, mono only for figures, and gold is never text on a light\n"
-        "     surface (there it is a fill or a border). */\n"
-        f"  --color-bitronics: #ECD400;      /* brand gold */\n"
-        "  --color-gold-ink: #4A4200;       /* text placed on gold */\n"
-        "  --color-gold-deep: #7A6D00;      /* gold that stays legible on light */\n",
+        "     surface (there it is a fill or a border). */\n",
         "  /* Bitzy Labs palette on upstream's structure. The accent rules survive:\n"
         "     one accent per block, crimson is a hit and not a background, mono only\n"
         "     for figures, and crimson is never text on a light surface (there it is\n"
-        "     a fill or a border). */\n"
-        f"  --color-bitronics: {CRIMSON};     /* brand crimson, sampled from the logo */\n"
-        f"  --color-gold-ink: {INK_ON_CRIMSON};       /* text placed on crimson */\n"
-        f"  --color-gold-deep: {CRIMSON_DEEP};      /* crimson that stays legible on light */\n",
+        "     a fill or a border). */\n",
     )
-    changed |= replace_once(
+    changed |= replace_if_present(
+        path,
+        "  /* Bitronics design system, kept in step with the store theme's brand.css.",
+        "  /* Bitzy Labs palette on upstream's structure.",
+    )
+    changed |= replace_if_present(
         path,
         "/* The BITRONICS + FLASHER lockup, the same shape as the POOL badge */",
         "/* The Bitzy Labs + FLASHER lockup */",
@@ -269,21 +364,60 @@ def patch_selector() -> None:
 
 
 def patch_device_shops() -> None:
+    """Point the store links and the secure-boot explainer at us.
+
+    devices.ts is where upstream adds a board every few weeks, so nothing
+    here may depend on their wording: a pattern that stops matching means
+    upstream removed the thing we were patching, which needs no work from
+    us. The URL sweep afterwards is what actually guarantees no Bitronics
+    link survives, whatever shape upstream gives it.
+    """
     path = ROOT / "src" / "lib" / "devices.ts"
-    changed = replace_once(
-        path,
-        "const SHOP = 'https://bitronics.store/collections';",
-        f"const SHOP = '{SITE}';",
-    )
-    # The secure-boot explainer is factual, but the vendor it names is us now.
-    # Reworded rather than deleted: the security facts are the point of the
-    # paragraph and they stay exactly as upstream wrote them.
-    changed |= replace_once(
-        path,
-        "Units sold pre-flashed by Bitronics run Secure Boot v2",
-        "Units sold pre-flashed by BitzyLabs run Secure Boot v2",
-    )
-    note(changed, "devices.ts: shop links -> BitzyLabs, secure-boot explainer reworded")
+    text = path.read_text()
+
+    # `const SHOP = 'https://bitronics.store/collections'` and any sibling
+    # URL, whatever path they carry.
+    new = BITRONICS_URL.sub(SITE, text)
+
+    # The code appends a slug (`${SHOP}/nerdminer`) that only makes sense
+    # against their collection pages, so drop the suffixes and land every
+    # buy button on our root rather than on a path we may not serve.
+    new = re.sub(r"(`\$\{SHOP\})/[^`]+`", r"\1`", new)
+
+    # The secure-boot explainer stays factually as upstream wrote it; only
+    # the vendor it names changes.
+    new, n_prose = re.subn(r"pre-flashed by Bitronics", "pre-flashed by BitzyLabs", new)
+
+    changed = new != text
+    if changed:
+        path.write_text(new)
+    detail = ", secure-boot explainer reworded" if n_prose else ""
+    note(changed, f"devices.ts: shop links -> BitzyLabs{detail}")
+
+
+def sweep_urls() -> None:
+    """The net: any Bitronics URL anywhere becomes ours.
+
+    The targeted patches know the files upstream ships today. This covers
+    tomorrow's -- a link added in a file we have never seen still must not
+    reach the deploy. Matched on the domain rather than on surrounding code,
+    so upstream restructuring a component cannot slip one past it.
+    """
+    hits = []
+    for path in sorted((ROOT / "src").rglob("*")):
+        if not path.is_file() or path.suffix not in {".ts", ".tsx", ".css", ".json"}:
+            continue
+        try:
+            text = path.read_text()
+        except UnicodeDecodeError:
+            continue
+        if not BITRONICS_URL.search(text):
+            continue
+        path.write_text(BITRONICS_URL.sub(SITE, text))
+        hits.append(str(path.relative_to(ROOT)))
+    note(bool(hits), "sweep: any other bitronics.store URL -> BitzyLabs")
+    for hit in hits:
+        log(f"      {hit}")
 
 
 # --- Validation ------------------------------------------------------------
@@ -324,6 +458,31 @@ def validate() -> None:
     css = (ROOT / "src" / "app" / "globals.css").read_text()
     if f"--color-bitronics: {CRIMSON};" not in css:
         problems.append(f"globals.css: --color-bitronics is not {CRIMSON}")
+
+    # Several patches above are patterns that go quiet when the text is gone.
+    # This is where "gone" is told apart from "missed": the end state, not the
+    # journey, is what the site is judged on.
+    reader_facing = {
+        "src/app/layout.tsx": ROOT / "src" / "app" / "layout.tsx",
+        "src/components/Header.tsx": ROOT / "src" / "components" / "Header.tsx",
+        "src/components/Footer.tsx": ROOT / "src" / "components" / "Footer.tsx",
+        "src/components/ShopStrip.tsx": ROOT / "src" / "components" / "ShopStrip.tsx",
+        "src/lib/devices.ts": ROOT / "src" / "lib" / "devices.ts",
+    }
+    for label, source in reader_facing.items():
+        if source.exists() and "Bitronics" in source.read_text():
+            problems.append(f"{label}: still names Bitronics to the reader")
+
+    for source in sorted((ROOT / "src").rglob("*")):
+        if source.is_file() and source.suffix in {".ts", ".tsx"}:
+            if "bitronics-logo" in source.read_text():
+                problems.append(
+                    f"{source.relative_to(ROOT)}: still references the Bitronics wordmark"
+                )
+
+    footer = ROOT / "src" / "components" / "Footer.tsx"
+    if footer.exists() and "FIRMWARE_LINKS" in footer.read_text():
+        problems.append("Footer.tsx: the firmware links column is still present")
 
     # Tailwind v4 scans every file in the project for class candidates, so a
     # yellow utility spelled out anywhere -- including in this script -- would
@@ -370,6 +529,9 @@ def main() -> int:
             patch_palette()
             patch_selector()
             patch_device_shops()
+            # Last write, so every targeted patch gets first refusal on the
+            # anchors it knows and the sweep only sees what they left.
+            sweep_urls()
         validate()
     except PatchError as error:
         print(f"\nFAILED: {error}", file=sys.stderr)

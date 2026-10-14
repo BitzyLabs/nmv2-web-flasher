@@ -3,15 +3,6 @@ import { X } from 'lucide-react';
 
 const basePath = '';
 
-// Where each firmware actually comes from. Saying so in the footer is the
-// cheapest form of honesty: this site only re-serves other people's builds.
-const FIRMWARE_LINKS = [
-  { label: 'Bitaxe', href: 'https://github.com/bitaxeorg/ESP-Miner' },
-  { label: 'NerdQaxe & Octaxe', href: 'https://github.com/shufps/ESP-Miner-NerdQAxePlus' },
-  { label: 'NerdMiner', href: 'https://github.com/BitMaker-hub/NerdMiner_v2' },
-  { label: 'Seeder', href: 'https://github.com/BitMaker-hub/Seeder' },
-];
-
 const SITE_LINKS = [
   { label: 'Shop', href: 'https://www.bitzylabs.com' },
 ];
@@ -57,7 +48,7 @@ export default function Footer() {
       )}
 
       <footer className="mt-16 w-full border-t border-[var(--color-hairline)] bg-[var(--color-chrome)] text-white">
-        <div className="mx-auto grid w-full max-w-screen-xl gap-10 px-4 py-12 md:grid-cols-3 lg:px-6">
+        <div className="mx-auto grid w-full max-w-screen-xl gap-10 px-4 py-12 md:grid-cols-2 lg:px-6">
           <div>
             <div className="flex items-center gap-2.5">
               <img
@@ -70,24 +61,6 @@ export default function Footer() {
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/60">
               Open source firmware for open source hardware, flashed straight from the browser.
             </p>
-          </div>
-
-          <div>
-            <h3 className="font-display text-sm font-bold tracking-tight">Firmware</h3>
-            <ul className="mt-4 space-y-2.5">
-              {FIRMWARE_LINKS.map((link) => (
-                <li key={link.label}>
-                  <a
-                    href={link.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={linkClass}
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
           </div>
 
           <div>
