@@ -29,6 +29,12 @@ import DeviceIntro from './DeviceIntro';
 import DevBoardPanel from './bitzy/DevBoardPanel';
 import { isDevBoard, isStm32 } from '@/lib/bitzy/devboards';
 import { flashBluePill } from '@/lib/bitzy/stm32flash';
+import {
+  describeDeviceId,
+  flashBluePillSwd,
+  openStlink,
+  type StlinkConnection,
+} from '@/lib/bitzy/stlink';
 
 import { Terminal } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
@@ -401,6 +407,34 @@ export default function LandingHero() {
     }
   };
 
+  // The other way onto a Blue Pill: the SWD probe already on the bench.
+  // No BOOT0 jumper and no crossed wires -- the probe reaches the flash
+  // through the debug port, and connecting is also the chip check: the
+  // device id comes back before anything is written.
+  const stlinkRef = useRef<StlinkConnection | null>(null);
+
+  const handleConnectStlink = async () => {
+    setIsConnecting(true);
+    setStatus('Looking for an ST-Link...');
+
+    try {
+      const probe = await openStlink();
+      stlinkRef.current = probe;
+      setIsConnected(true);
+      setStatus(
+        `ST-Link connected: ${probe.version}, ${describeDeviceId(probe.deviceId)}. `
+          + 'Press Start Flashing.',
+      );
+    } catch (error) {
+      console.error('ST-Link connection failed:', error);
+      setStatus(
+        `ST-Link connection failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
   const handleConnect = async () => {
     setIsConnecting(true);
     setStatus(t('status.connecting'));
@@ -435,6 +469,10 @@ export default function LandingHero() {
       await stopSerialLogging();
     }
     try {
+      if (stlinkRef.current) {
+        await stlinkRef.current.close();
+        stlinkRef.current = null;
+      }
       if (serialPortRef.current?.readable) {
         await serialPortRef.current.close();
       }
@@ -910,28 +948,80 @@ export default function LandingHero() {
     setSelectedFirmware(only.supported_firmware[0]?.version ?? '');
   };
 
-  // The Blue Pill flashes through its ROM bootloader -- AN3155 over the same
-  // open serial port -- not through esptool. The file was hash-checked when
-  // the version was picked, so the bytes are reused when they are still to
-  // hand and fetched fresh otherwise.
-  const flashBluePillFlow = async () => {
+  // One image, two links. The file was hash-checked when the version was
+  // picked, so the bytes are reused when they are still to hand and
+  // fetched fresh otherwise -- whichever transport carries them.
+  const bluePillImage = async (): Promise<Uint8Array> => {
     const path = imageFor(firmware.path, false);
     if (!path) throw new Error('No firmware is available for this device.');
 
     const cached = checkedBytesRef.current;
-    let bytes: ArrayBuffer;
+    if (cached && cached.path === path) return new Uint8Array(cached.bytes);
 
-    if (cached && cached.path === path) {
-      bytes = cached.bytes;
-    } else {
-      const response = await fetch(path);
-      if (!response.ok) throw new Error('Failed to load the firmware file.');
-      bytes = await response.arrayBuffer();
+    const response = await fetch(path);
+    if (!response.ok) throw new Error('Failed to load the firmware file.');
+    return new Uint8Array(await response.arrayBuffer());
+  };
+
+  // Over the ROM bootloader: AN3155 on the open serial port. A port that
+  // opens proves nothing about what answers on it, so a bootloader that
+  // says nothing is not left as "sync failed" -- the port itself is named:
+  // a built-in ttyS has no adapter behind it, and an ST-Link's virtual
+  // COM port only reaches PA10/PA9 when those pins are wired to it.
+  const flashBluePillFlow = async () => {
+    const data = await bluePillImage();
+    try {
+      await flashBluePill({
+        port: serialPortRef.current,
+        data,
+        onProgress: (percent, phase) => {
+          if (phase === 'write') {
+            setProgress(percent);
+            setStatus(t('status.flashing', { percent }));
+          } else if (phase === 'verify') {
+            setProgress(100);
+            setStatus('Verifying what was written...');
+          } else if (phase === 'erase') {
+            setStatus('Erasing flash...');
+          } else {
+            setStatus('Talking to the bootloader...');
+          }
+        },
+      });
+    } catch (error) {
+      const info = (serialPortRef.current?.getInfo?.() ?? {}) as {
+        usbVendorId?: number;
+      };
+      const guidance =
+        info.usbVendorId === undefined
+          ? ' This port has no USB adapter behind it (a built-in ttyS...) -- '
+            + 'pick your USB-UART adapter instead; it appears as ttyUSB or '
+            + 'ttyACM at the bottom of the port list.'
+          : info.usbVendorId === 0x0483
+            ? ' This port belongs to an ST-Link: its virtual COM port only '
+              + 'reaches PA10/PA9 when those pins are wired to it. For the '
+              + 'SWD pins this dongle is built for, use the ST-Link (SWD) '
+              + 'connect below.'
+            : '';
+      if (guidance && error instanceof Error) {
+        throw new Error(`${error.message}${guidance}`);
+      }
+      throw error;
     }
+  };
 
-    await flashBluePill({
-      port: serialPortRef.current,
-      data: new Uint8Array(bytes),
+  // Over SWD: the same bytes through the probe. The core stops first, the
+  // F1 flash controller is driven the way st-flash drives it -- unlock,
+  // erase every page the image touches, program, read every byte back --
+  // and only then the chip is reset. No BOOT0 jumper: no bootloader is
+  // involved at all.
+  const flashBluePillSwdFlow = async () => {
+    const probe = stlinkRef.current;
+    if (!probe) throw new Error('The ST-Link is not connected.');
+    const data = await bluePillImage();
+    await flashBluePillSwd({
+      probe,
+      data,
       onProgress: (percent, phase) => {
         if (phase === 'write') {
           setProgress(percent);
@@ -942,7 +1032,7 @@ export default function LandingHero() {
         } else if (phase === 'erase') {
           setStatus('Erasing flash...');
         } else {
-          setStatus('Talking to the bootloader...');
+          setStatus('Stopping the core...');
         }
       },
     });
@@ -978,16 +1068,23 @@ export default function LandingHero() {
         await stopSerialLogging();
       }
 
-      // DevBoard Tests: the Blue Pill talks to its ROM bootloader over the
-      // port that is already open, so it never touches esptool or the ESP
-      // reset dance below. What the bootloader did -- including reading every
-      // byte back -- is said in the status line rather than assumed.
+      // DevBoard Tests: the Blue Pill flashes over whichever link is open --
+      // the ROM bootloader on serial, or the probe on SWD. Both read every
+      // byte back before saying done, and what each one did is said in the
+      // status line rather than assumed.
       if (isStm32(selectedDevice)) {
-        await flashBluePillFlow();
-        setStatus(
-          'Flash complete and verified. Set the BOOT0 jumper back to 0, press Reset, ' +
-            'and the LED should blink.',
-        );
+        if (stlinkRef.current) {
+          await flashBluePillSwdFlow();
+          setStatus(
+            'Flash complete and verified over SWD. The chip was reset -- the LED should blink.',
+          );
+        } else {
+          await flashBluePillFlow();
+          setStatus(
+            'Flash complete and verified. Set the BOOT0 jumper back to 0, press Reset, ' +
+              'and the LED should blink.',
+          );
+        }
         return;
       }
 
@@ -1393,6 +1490,24 @@ export default function LandingHero() {
                 {isConnected ? t('hero.disconnect') : t('hero.connect')}
                 <Usb className="ml-2 h-4 w-4" />
               </Button>
+              {isStm32(selectedDevice) && (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleConnectStlink}
+                  disabled={
+                    isConnected ||
+                    isConnecting ||
+                    isFlashing ||
+                    !selectedDevice ||
+                    !selectedBoardVersion ||
+                    !selectedFirmware
+                  }
+                >
+                  Connect ST-Link (SWD)
+                  <Cpu className="ml-2 h-4 w-4" />
+                </Button>
+              )}
               <Button
                 className="w-full mb-4"
                 onClick={handleStartFlashing}
