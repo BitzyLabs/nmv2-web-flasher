@@ -142,6 +142,111 @@ def inject_once(path: Path, marker: str, old: str, new: str) -> bool:
     return replace_once(path, old, new)
 
 
+def inject_rows(path: Path, decl: str, block: str, marker: str) -> bool:
+    """Insert `block` straight after the declaration line `decl`.
+
+    Marker-gated like inject_once, but the anchor is the declaration
+    itself: upstream's own additions land after ours without disturbing
+    it, so nothing here depends on who currently holds the first row --
+    and ours being first is the whole point, because the picker renders
+    these lists in order. The sync resolves conflicts toward upstream
+    (-X theirs), so when upstream rewrites one of these files our rows
+    can come back gone; marker absent then means re-insert them.
+    """
+    text = path.read_text()
+    if marker in text:
+        return False
+    if decl not in text:
+        raise PatchError(
+            f"{path.relative_to(ROOT)}: anchor not found -- upstream changed this file.\n"
+            f"  anchor was: {decl.splitlines()[0][:90]!r}"
+        )
+    if text.count(decl) != 1:
+        raise PatchError(
+            f"{path.relative_to(ROOT)}: anchor matched {text.count(decl)} times, expected 1"
+        )
+    path.write_text(text.replace(decl, decl + block, 1))
+    return True
+
+
+def inject_category_type() -> bool:
+    """Append our value to the DeviceCategory union, however they wrote it."""
+    path = ROOT / "src" / "lib" / "devices.ts"
+    text = path.read_text()
+    match = re.search(r"^export type DeviceCategory = ([^;\n]+);$", text, re.M)
+    if not match:
+        raise PatchError(
+            "src/lib/devices.ts: anchor not found -- upstream changed this file.\n"
+            "  anchor was: 'export type DeviceCategory ='"
+        )
+    if "'devboards'" in match.group(1):
+        return False
+    path.write_text(text[: match.end(1)] + " | 'devboards'" + text[match.end(1) :])
+    return True
+
+
+def inject_mcu_field() -> bool:
+    """Give DeviceSource the field that says which flasher a device needs."""
+    path = ROOT / "src" / "lib" / "devices.ts"
+    text = path.read_text()
+    if "mcu?: 'esp32' | 'stm32';" in text:
+        return False
+    anchor = re.search(r"^  detectChip\?: boolean;$", text, re.M)
+    if not anchor:
+        raise PatchError(
+            "src/lib/devices.ts: anchor not found -- upstream changed this file.\n"
+            "  anchor was: '  detectChip?: boolean;'"
+        )
+    block = (
+        "\n  /**\n"
+        "   * Which silicon the device's flasher talks to. Absent means the esptool\n"
+        "   * path every miner and tool takes; 'stm32' takes the ROM bootloader path.\n"
+        "   */\n"
+        "  mcu?: 'esp32' | 'stm32';"
+    )
+    path.write_text(text[: anchor.end()] + block + text[anchor.end() :])
+    return True
+
+
+def inject_picker_tiles() -> bool:
+    """Add the two devboard tiles to whatever JSON style the file wears.
+
+    Upstream regenerates this table whenever it publishes firmware, and
+    the sync resolves that rewrite in their own favour -- the whole file
+    comes back in their formatting with our rows gone, which the sync
+    harness caught in its first run. The markers say whether our rows
+    survived; the `"devices": [` line, however it is indented, says where
+    they go.
+    """
+    path = ROOT / "src" / "components" / "firmware_data.json"
+    text = path.read_text()
+
+    tiles = (("ESP 32 N16R8", "esp32-n16r8"), ("STM 32 BluePill", "stm32-bluepill"))
+    missing = [(n, p) for n, p in tiles if f'"name": "{n}",' not in text]
+    if not missing:
+        return False
+
+    head = re.search(r'^([ \t]*)"devices": \[\n', text, re.M)
+    if not head:
+        raise PatchError(
+            "src/components/firmware_data.json: anchor not found -- upstream "
+            "changed this file.\n  anchor was: '\"devices\": ['"
+        )
+    level1 = head.group(1)
+    level2 = level1 + level1
+    level3 = level2 + level1
+    rows = "".join(
+        f"{level2}{{\n"
+        f'{level3}"name": "{name}",\n'
+        f'{level3}"picture": "pictures/{picture}.png",\n'
+        f'{level3}"boards": []\n'
+        f"{level2}}},\n"
+        for name, picture in missing
+    )
+    path.write_text(text[: head.end()] + rows + text[head.end() :])
+    return True
+
+
 def replace_if_present(path: Path, old: str, new: str) -> bool:
     """Replace `old` with `new`, but stay quiet when `old` is simply gone.
 
@@ -451,61 +556,33 @@ DEVBOARD_FILES = (
 def patch_devboards() -> None:
     """Add the DevBoard Tests section: two devices, one new flash path.
 
-    Upstream owns three files this touches, so each edit is anchored on the
-    exact text as it stands today and fails loudly if upstream moved it --
-    the same standard as the branding's structure patches, and for the same
-    reason: a device the picker offers but cannot flash is worse than a
-    failed sync. The overlay's own code (lib/bitzy, components/bitzy, the
-    pictures, the firmware folders) needs no patching; the merge brings it.
+    Upstream owns the three files this touches, and they divide into two
+    standards. The tables upstream *appends to* -- the category list, the
+    device sources, the picker's JSON -- self-heal: the sync resolves
+    upstream's rewrites of those files in their own favour (formatting
+    and all, -X theirs), so these patch from the declaration line, gated
+    on markers only this script writes, and put our rows back wherever
+    theirs landed. The flow wiring in LandingHero stays exact-text and    fails loudly, because a moved anchor there means upstream changed how
+    flashing works and a human has to look. The overlay's own code
+    (lib/bitzy, components/bitzy, the pictures, the firmware folders)
+    needs no patching; the merge brings it.
     """
-    devices_ts = ROOT / "src" / "lib" / "devices.ts"
     changed_devices = False
-
-    changed_devices |= inject_once(
-        devices_ts,
-        "| 'devboards';",
-        "export type DeviceCategory = 'miners' | 'tools';",
-        "export type DeviceCategory = 'miners' | 'tools' | 'devboards';",
-    )
-
-    changed_devices |= inject_once(
-        devices_ts,
-        "mcu?: 'esp32' | 'stm32';",
-        "  detectChip?: boolean;\n};",
-        "  detectChip?: boolean;\n"
-        "  /**\n"
-        "   * Which silicon the device's flasher talks to. Absent means the esptool\n"
-        "   * path every miner and tool takes; 'stm32' takes the ROM bootloader path.\n"
-        "   */\n"
-        "  mcu?: 'esp32' | 'stm32';\n"
-        "};",
-    )
-
-    # First in the array, because the picker renders these sections in order
-    # and DevBoard Tests belongs before the miners.
-    changed_devices |= inject_once(
-        devices_ts,
-        "id: 'devboards',",
-        "export const CATEGORIES: { id: DeviceCategory; title: string; blurb: string }[] = [\n"
-        "  {\n"
-        "    id: 'miners',",
-        "export const CATEGORIES: { id: DeviceCategory; title: string; blurb: string }[] = [\n"
+    changed_devices |= inject_category_type()
+    changed_devices |= inject_mcu_field()
+    changed_devices |= inject_rows(
+        ROOT / "src" / "lib" / "devices.ts",
+        "export const CATEGORIES: { id: DeviceCategory; title: string; blurb: string }[] = [\n",
         "  {\n"
         "    id: 'devboards',\n"
         "    title: 'DevBoard Tests',\n"
         "    blurb: 'Blinky builds for the boards on our own bench.',\n"
-        "  },\n"
-        "  {\n"
-        "    id: 'miners',",
+        "  },\n",
+        "id: 'devboards',",
     )
-
-    changed_devices |= inject_once(
-        devices_ts,
-        "device: 'ESP 32 N16R8',",
-        "export const DEVICE_SOURCES: DeviceSource[] = [\n"
-        "  {\n"
-        "    device: 'NerdMiner',",
-        "export const DEVICE_SOURCES: DeviceSource[] = [\n"
+    changed_devices |= inject_rows(
+        ROOT / "src" / "lib" / "devices.ts",
+        "export const DEVICE_SOURCES: DeviceSource[] = [\n",
         "  // DevBoard Tests come first: these are the boards this fork bench-tests\n"
         "  // firmware on, and the picker should offer them before the miners.\n"
         "  {\n"
@@ -521,36 +598,12 @@ def patch_devboards() -> None:
         "    mcu: 'stm32',\n"
         "    tagline: 'STM32F103 bench test',\n"
         "    slug: 'stm32-bluepill',\n"
-        "  },\n"
-        "  {\n"
-        "    device: 'NerdMiner',",
+        "  },\n",
+        "device: 'ESP 32 N16R8',",
     )
     note(changed_devices, "devices.ts: DevBoard Tests category + two devices")
 
-    # The picker builds its tiles from this table; a device missing here is a
-    # device nobody can reach, no matter what devices.ts says.
-    picker = ROOT / "src" / "components" / "firmware_data.json"
-    changed_picker = inject_once(
-        picker,
-        '"name": "ESP 32 N16R8",',
-        '  "devices": [\n'
-        "    {\n"
-        '      "name": "NerdMiner",',
-        '  "devices": [\n'
-        "    {\n"
-        '      "name": "ESP 32 N16R8",\n'
-        '      "picture": "pictures/esp32-n16r8.png",\n'
-        '      "boards": []\n'
-        "    },\n"
-        "    {\n"
-        '      "name": "STM 32 BluePill",\n'
-        '      "picture": "pictures/stm32-bluepill.png",\n'
-        '      "boards": []\n'
-        "    },\n"
-        "    {\n"
-        '      "name": "NerdMiner",',
-    )
-    note(changed_picker, "firmware_data.json: tiles for both devboards")
+    note(inject_picker_tiles(), "firmware_data.json: tiles for both devboards")
 
     patch_devboard_flows()
 
