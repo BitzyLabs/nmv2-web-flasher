@@ -67,6 +67,7 @@ export default function LandingHero() {
   const [status, setStatus] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [continueReady, setContinueReady] = useState(false);
   const [isFlashing, setIsFlashing] = useState(false);
   const [isLogging, setIsLogging] = useState(false);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -1191,6 +1192,7 @@ export default function LandingHero() {
 
   const selectDevice = (name: string) => {
     setSelectedDevice(name);
+    setContinueReady(false);
     setSelectedBoardVersion('');
     setSelectedFirmware('');
     setVerification(null);
@@ -1260,11 +1262,7 @@ export default function LandingHero() {
                   />
                 )}
                 <Button onClick={openModal} disabled={isConnecting || isFlashing}>
-                  {selectedDevice === '' ? (
-                    t('hero.selectDevice')
-                  ) : (
-                    <span className="font-doto">{selectedDevice}</span>
-                  )}
+                  {selectedDevice === '' ? t('hero.selectDevice') : selectedDevice}
                 </Button>
               </div>
               <div className="flex flex-col justify-center w-52">
@@ -1291,21 +1289,20 @@ export default function LandingHero() {
                 )}
                 {isDevBoard(selectedDevice) ? (
                   <Button
-                    onClick={continueToFlash}
+                    onClick={() => {
+                      setContinueReady(true);
+                      continueToFlash();
+                    }}
                     disabled={isConnecting || isFlashing || selectedDevice === ''}
                   >
-                    Continue To Flash
+                    {continueReady ? 'Ready To Flash' : 'Continue To Flash'}
                   </Button>
                 ) : (
                 <Button
                   onClick={() => setIsBoardPickerOpen(true)}
                   disabled={isConnecting || isFlashing || selectedDevice === ''}
                 >
-                  {selectedBoardVersion === '' ? (
-                    t('hero.selectBoard')
-                  ) : (
-                    <span className="font-doto">{selectedBoardVersion}</span>
-                  )}
+                  {selectedBoardVersion === '' ? t('hero.selectBoard') : selectedBoardVersion}
                 </Button>
                 )}
               </div>

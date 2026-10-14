@@ -2243,10 +2243,13 @@ def patch_devboard_flows() -> None:
     )
 
     # Wrapping patch: the original Button survives inside the else branch,
-    # which is how replace_once knows it already ran.
+    # which is how replace_once knows it already ran. The marker is the
+    # wrapper itself -- never the Continue button's onClick, which a later
+    # chain rewrites, and a marker a later chain consumes is a marker that
+    # makes this one fire again.
     changed |= inject_once(
         path,
-        "onClick={continueToFlash}",
+        "isDevBoard(selectedDevice) ? (",
         "                <Button\n"
         "                  onClick={() => setIsBoardPickerOpen(true)}\n"
         "                  disabled={isConnecting || isFlashing || selectedDevice === ''}\n"
@@ -2446,7 +2449,50 @@ def patch_devboard_flows() -> None:
         "          error instanceof Error ? error.message : String(error)\n"
         "        ).replace(/\\.$/, '')}. Please try again.`,",
     )
-    note(changed, "LandingHero.tsx: Continue To Flash, STM32 path (ST-Link over WebUSB), instructions")
+    # The devboard button acknowledges the press: Continue becomes Ready the
+    # moment it is clicked, so the flow says where it is rather than what
+    # it is for. Picking another device sends it back, because a new
+    # device is a new flow.
+    changed |= inject_once(
+        path,
+        "const [continueReady, setContinueReady]",
+        "  const [isConnecting, setIsConnecting] = useState(false);\n"
+        "  const [isConnected, setIsConnected] = useState(false);",
+        "  const [isConnecting, setIsConnecting] = useState(false);\n"
+        "  const [isConnected, setIsConnected] = useState(false);\n"
+        "  const [continueReady, setContinueReady] = useState(false);",
+    )
+    changed |= inject_once(
+        path,
+        "'Ready To Flash'",
+        "                  <Button\n"
+        "                    onClick={continueToFlash}\n"
+        "                    disabled={isConnecting || isFlashing || selectedDevice === ''}\n"
+        "                  >\n"
+        "                    Continue To Flash\n"
+        "                  </Button>",
+        "                  <Button\n"
+        "                    onClick={() => {\n"
+        "                      setContinueReady(true);\n"
+        "                      continueToFlash();\n"
+        "                    }}\n"
+        "                    disabled={isConnecting || isFlashing || selectedDevice === ''}\n"
+        "                  >\n"
+        "                    {continueReady ? 'Ready To Flash' : 'Continue To Flash'}\n"
+        "                  </Button>",
+    )
+    changed |= inject_once(
+        path,
+        "setContinueReady(false)",
+        "  const selectDevice = (name: string) => {\n"
+        "    setSelectedDevice(name);\n"
+        "    setSelectedBoardVersion('');",
+        "  const selectDevice = (name: string) => {\n"
+        "    setSelectedDevice(name);\n"
+        "    setContinueReady(false);\n"
+        "    setSelectedBoardVersion('');",
+    )
+    note(changed, "LandingHero.tsx: Continue To Flash (and its Ready state), STM32 path (ST-Link over WebUSB), instructions")
 
 
 def _filter_array_rows(
@@ -2872,9 +2918,10 @@ def patch_hero_light() -> None:
     # Dot matrix on the words that name things. The headline splits as it
     # always did -- lead word, middle, accent -- but the lead and the accent
     # (the verb the sentence opens with and the crimson word it lands on)
-    # now wear the face, and the device or board name does too, wherever the
-    # page says what is selected: the big name, and the two step buttons
-    # that show a name once there is one to show.
+    # now wear the face, and so does the big device name. The step buttons
+    # deliberately keep the page face: they are controls, not headings, and
+    # a name under a finger should read like everything else the finger
+    # can press.
     changed |= inject_once(
         path,
         "in dot matrix",
@@ -2915,26 +2962,6 @@ def patch_hero_light() -> None:
         "text-[var(--color-ink)] sm:text-4xl\">\n"
         "                  {selectedDevice}\n"
         "                </h1>",
-    )
-    changed |= inject_once(
-        path,
-        "<span className=\"font-doto\">{selectedDevice}</span>",
-        "                  {selectedDevice === '' ? t('hero.selectDevice') : selectedDevice}",
-        "                  {selectedDevice === '' ? (\n"
-        "                    t('hero.selectDevice')\n"
-        "                  ) : (\n"
-        "                    <span className=\"font-doto\">{selectedDevice}</span>\n"
-        "                  )}",
-    )
-    changed |= inject_once(
-        path,
-        "<span className=\"font-doto\">{selectedBoardVersion}</span>",
-        "                  {selectedBoardVersion === '' ? t('hero.selectBoard') : selectedBoardVersion}",
-        "                  {selectedBoardVersion === '' ? (\n"
-        "                    t('hero.selectBoard')\n"
-        "                  ) : (\n"
-        "                    <span className=\"font-doto\">{selectedBoardVersion}</span>\n"
-        "                  )}",
     )
     note(changed, "LandingHero.tsx: the flasher band reads light -- ink, muted, white card")
 
@@ -3627,7 +3654,7 @@ def validate() -> None:
         # The failure line names itself even when no locale carries the key,
         # and the words that name things wear the dot-matrix face.
         "t('status.flashingFailed', 'Flashing failed')",
-        "<span className=\"font-doto\">{selectedDevice}</span>",
+        "font-doto text-3xl font-bold",
     ):
         if needle not in hero:
             problems.append(f"LandingHero.tsx: {needle!r} missing (DevBoard flow)")
