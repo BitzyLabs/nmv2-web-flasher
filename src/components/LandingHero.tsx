@@ -512,13 +512,33 @@ export default function LandingHero() {
       setIsLogging(true);
       const port = serialPortRef.current;
 
-      // First ensure any existing connections are cleaned up
-      if (readerRef.current) {
-        await readerRef.current.cancel();
+      // The flash hands this port to esptool, which gives it back
+      // in no state worth trusting: possibly open with the stream
+      // already cancelled, possibly closed. Close first -- swallowed,
+      // because only one of those is true -- then open: the same port
+      // object, so the monitor returns without a round of Disconnect
+      // and Connect.
+      if (!port.readable) {
+        await port.close().catch(() => undefined);
+        await port.open({
+          baudRate: 115200,
+          dataBits: 8,
+          stopBits: 1,
+          parity: 'none',
+          flowControl: 'none',
+        });
       }
-      if (readableStreamClosedRef.current) {
-        await readableStreamClosedRef.current;
-      }
+
+      // First retire whatever the last session left behind: a
+      // cancelled reader rejects the pipe it was feeding with no
+      // reason at all, and a rejection here must not take the new
+      // session down with it.
+      const staleReader = readerRef.current;
+      const staleClosed = readableStreamClosedRef.current;
+      readerRef.current = null;
+      readableStreamClosedRef.current = null;
+      if (staleReader) await staleReader.cancel().catch(() => undefined);
+      if (staleClosed) await staleClosed.catch(() => undefined);
 
       // Set up text decoder stream
       const decoder = new TextDecoderStream();
@@ -546,7 +566,9 @@ export default function LandingHero() {
     } catch (error) {
       console.error('Serial logging error:', error);
       setStatus(
-        `${t('status.loggingError')}: ${error instanceof Error ? error.message : String(error)}`,
+        `${t('status.loggingError', 'Serial logging failed')}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
       );
     }
     setIsLogging(false);
@@ -554,17 +576,18 @@ export default function LandingHero() {
 
   const stopSerialLogging = async () => {
     try {
-      if (readerRef.current) {
-        await readerRef.current.cancel();
-        readerRef.current = null;
-      }
-      if (readableStreamClosedRef.current) {
-        await readableStreamClosedRef.current;
-        readableStreamClosedRef.current = null;
-      }
-      if (textDecoderRef.current) {
-        textDecoderRef.current = null;
-      }
+      // Cancelling the reader rejects the pipe it was feeding with
+      // the cancel reason -- nothing at all by default -- so every
+      // ref is taken and cleared first, and the awaits swallow what
+      // the cancellation leaves behind. A step that throws must not
+      // leave the next start awaiting a dead promise.
+      const reader = readerRef.current;
+      readerRef.current = null;
+      const closed = readableStreamClosedRef.current;
+      readableStreamClosedRef.current = null;
+      textDecoderRef.current = null;
+      if (reader) await reader.cancel().catch(() => undefined);
+      if (closed) await closed.catch(() => undefined);
     } catch (error) {
       console.error('Error stopping serial logging:', error);
     } finally {

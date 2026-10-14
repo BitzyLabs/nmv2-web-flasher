@@ -2492,7 +2492,115 @@ def patch_devboard_flows() -> None:
         "    setContinueReady(false);\n"
         "    setSelectedBoardVersion('');",
     )
-    note(changed, "LandingHero.tsx: Continue To Flash (and its Ready state), STM32 path (ST-Link over WebUSB), instructions")
+    # The serial monitor's teardown: cancelling a reader rejects the pipe
+    # it was feeding with the cancel reason -- nothing at all by default --
+    # so every ref is taken and cleared before anything is awaited, and the
+    # awaits swallow what the cancellation leaves behind. Before this, the
+    # rejected pipe promise stayed in readableStreamClosedRef until a page
+    # refresh: the next Start Logging awaited it, died on an undefined
+    # rejection, and no amount of Disconnect and Connect could reach it.
+    changed |= inject_once(
+        path,
+        "Cancelling the reader rejects the pipe",
+        "  const stopSerialLogging = async () => {\n"
+        "    try {\n"
+        "      if (readerRef.current) {\n"
+        "        await readerRef.current.cancel();\n"
+        "        readerRef.current = null;\n"
+        "      }\n"
+        "      if (readableStreamClosedRef.current) {\n"
+        "        await readableStreamClosedRef.current;\n"
+        "        readableStreamClosedRef.current = null;\n"
+        "      }\n"
+        "      if (textDecoderRef.current) {\n"
+        "        textDecoderRef.current = null;\n"
+        "      }\n"
+        "    } catch (error) {\n"
+        "      console.error('Error stopping serial logging:', error);\n"
+        "    } finally {\n"
+        "      setIsLogging(false);\n"
+        "    }\n"
+        "  };",
+        "  const stopSerialLogging = async () => {\n"
+        "    try {\n"
+        "      // Cancelling the reader rejects the pipe it was feeding with\n"
+        "      // the cancel reason -- nothing at all by default -- so every\n"
+        "      // ref is taken and cleared first, and the awaits swallow what\n"
+        "      // the cancellation leaves behind. A step that throws must not\n"
+        "      // leave the next start awaiting a dead promise.\n"
+        "      const reader = readerRef.current;\n"
+        "      readerRef.current = null;\n"
+        "      const closed = readableStreamClosedRef.current;\n"
+        "      readableStreamClosedRef.current = null;\n"
+        "      textDecoderRef.current = null;\n"
+        "      if (reader) await reader.cancel().catch(() => undefined);\n"
+        "      if (closed) await closed.catch(() => undefined);\n"
+        "    } catch (error) {\n"
+        "      console.error('Error stopping serial logging:', error);\n"
+        "    } finally {\n"
+        "      setIsLogging(false);\n"
+        "    }\n"
+        "  };",
+    )
+    # Starting up: retire whatever the last session left behind without
+    # dying on it, and take the port back from the flash if esptool handed
+    # it back closed -- reopening the same port object is how the monitor
+    # returns without a round of Disconnect and Connect.
+    changed |= inject_once(
+        path,
+        "retire whatever the last session",
+        "      setIsLogging(true);\n"
+        "      const port = serialPortRef.current;\n"
+        "\n"
+        "      // First ensure any existing connections are cleaned up\n"
+        "      if (readerRef.current) {\n"
+        "        await readerRef.current.cancel();\n"
+        "      }\n"
+        "      if (readableStreamClosedRef.current) {\n"
+        "        await readableStreamClosedRef.current;\n"
+        "      }",
+        "      setIsLogging(true);\n"
+        "      const port = serialPortRef.current;\n"
+        "\n"
+        "      // The flash hands this port to esptool, which gives it back\n"
+        "      // in no state worth trusting: possibly open with the stream\n"
+        "      // already cancelled, possibly closed. Close first -- swallowed,\n"
+        "      // because only one of those is true -- then open: the same port\n"
+        "      // object, so the monitor returns without a round of Disconnect\n"
+        "      // and Connect.\n"
+        "      if (!port.readable) {\n"
+        "        await port.close().catch(() => undefined);\n"
+        "        await port.open({\n"
+        "          baudRate: 115200,\n"
+        "          dataBits: 8,\n"
+        "          stopBits: 1,\n"
+        "          parity: 'none',\n"
+        "          flowControl: 'none',\n"
+        "        });\n"
+        "      }\n"
+        "\n"
+        "      // First retire whatever the last session left behind: a\n"
+        "      // cancelled reader rejects the pipe it was feeding with no\n"
+        "      // reason at all, and a rejection here must not take the new\n"
+        "      // session down with it.\n"
+        "      const staleReader = readerRef.current;\n"
+        "      const staleClosed = readableStreamClosedRef.current;\n"
+        "      readerRef.current = null;\n"
+        "      readableStreamClosedRef.current = null;\n"
+        "      if (staleReader) await staleReader.cancel().catch(() => undefined);\n"
+        "      if (staleClosed) await staleClosed.catch(() => undefined);",
+    )
+    # Upstream asks for a key no locale carries, the same way it asks for
+    # status.flashingFailed: the failure line renders as the raw key.
+    changed |= inject_once(
+        path,
+        "t('status.loggingError', 'Serial logging failed')",
+        "        `${t('status.loggingError')}: ${error instanceof Error ? error.message : String(error)}`,",
+        "        `${t('status.loggingError', 'Serial logging failed')}: ${\n"
+        "          error instanceof Error ? error.message : String(error)\n"
+        "        }`,",
+    )
+    note(changed, "LandingHero.tsx: Continue To Flash (and its Ready state), STM32 path (ST-Link over WebUSB), instructions, serial monitor lifecycle")
 
 
 def _filter_array_rows(
@@ -3651,9 +3759,10 @@ def validate() -> None:
         "Serial logging is not available on this board",
         "flashBluePillSwdFlow",
         "handleConnectStlink",
-        # The failure line names itself even when no locale carries the key,
-        # and the words that name things wear the dot-matrix face.
+        # The failure lines name themselves even when no locale carries
+        # the key, and the words that name things wear the dot-matrix face.
         "t('status.flashingFailed', 'Flashing failed')",
+        "t('status.loggingError', 'Serial logging failed')",
         "font-doto text-3xl font-bold",
     ):
         if needle not in hero:
