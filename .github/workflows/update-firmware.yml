@@ -42,12 +42,12 @@ jobs:
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-        git add public/firmware/
+        # Only the firmware the picker still serves is staged: the updater
+        # checks every configured device, but folders this fork no longer
+        # offers must not land back on main (the patcher prunes them at
+        # build either way -- this keeps main itself clean).
+        git add public/firmware/nerdminer
         git add src/components/firmware_data.json
-        # The changelog the site shows under "Stay updated". The script wrote
-        # it on every run from the start, but it was never added here, so the
-        # page kept serving whatever was committed by hand.
-        git add public/releases.json
         TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
         git commit -m "🤖 Auto-update firmware releases
 

@@ -5,16 +5,16 @@ export default function Features() {
   const { t } = useTranslation();
 
   return (
-    <section id="features" className="band-light w-full py-16 md:py-24">
+    <section id="features" className="band-light w-full py-6 md:py-8">
       <div className="mx-auto w-full max-w-screen-xl px-4 md:px-6">
-        <div className="mb-10 text-center">
+        <div className="mb-4 text-center">
           <p className="brand-kicker">Why the browser</p>
           <h2 className="font-display mt-1 text-2xl font-bold tracking-tight text-[var(--color-ink)]">
             {t('features.title')}
           </h2>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-2.5 md:grid-cols-3">
           <FeatureCard
             icon={<Zap className="h-6 w-6" />}
             title={t('features.fastFlashing.title')}
@@ -46,14 +46,14 @@ function FeatureCard({
   description: string;
 }) {
   return (
-    <div className="rounded-xl border border-[var(--color-hairline-light)] bg-white p-6">
-      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--color-bitronics)] text-[var(--color-gold-ink)]">
+    <div className="rounded-xl border border-[var(--color-hairline-light)] bg-white p-3">
+      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-bitzy)] text-[var(--color-gold-ink)]">
         {icon}
       </div>
-      <h3 className="font-display mt-4 font-bold tracking-tight text-[var(--color-ink)]">
+      <h3 className="font-display mt-2.5 font-bold tracking-tight text-[var(--color-ink)]">
         {title}
       </h3>
-      <p className="mt-1.5 text-sm leading-relaxed text-[var(--color-ink)]/60">{description}</p>
+      <p className="mt-1 text-sm leading-relaxed text-[var(--color-ink)]/60">{description}</p>
     </div>
   );
 }

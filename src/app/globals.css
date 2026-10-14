@@ -96,20 +96,21 @@
      one accent per block, crimson is a hit and not a background, mono only
      for figures, and crimson is never text on a light surface (there it is
      a fill or a border). */
-  --color-bitronics: #DB092A;     /* brand crimson, sampled from the logo */
+  --color-bitzy: #DC143C;     /* brand crimson, locked by the guide the store ships */
   --color-gold-ink: #FFFFFF;       /* text placed on crimson */
-  --color-gold-deep: #B00722;      /* crimson that stays legible on light */
+  --color-gold-deep: #B01030;      /* crimson that stays legible on light */
   --color-bitcoin: #F7931A;        /* figures and values only */
-  --color-surface: #161618;        /* cards */
-  --color-chrome: #1B1B1D;         /* header and footer */
-  --color-chrome-light: #26262A;
+  --color-surface: #222222;        /* cards */
+  --color-chrome: #222222;         /* the dark chrome: panels and pickers */
+  --color-chrome-light: #3A3A3A;
   --color-hairline: #2A2A2E;
   --color-muted-ink: #8A8A8F;
+  --color-muted-warm: #6D6A64;   /* muted text on a light surface */
   /* The light half of the palette. The pool alternates dark, gold and light
      bands rather than running black end to end, and so does this. */
-  --color-ink: #1D1D1F;            /* text on a light surface */
-  --color-band-light: #FAFAFA;     /* the light band itself */
-  --color-hairline-light: #E2E0DA;
+  --color-ink: #222222;            /* text on a light surface */
+  --color-band-light: #F7F6F3;     /* the light band itself */
+  --color-hairline-light: #E7E4DE;
 
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
@@ -227,35 +228,35 @@
 
   .dark {
     /* --background: 222.2 84% 4.9%; */
-    --background: 0 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 13.33%;
 
     /* --card: 222.2 84% 4.9%; */
-    --card: 0 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 13.33%;
 
     /* --popover: 222.2 84% 4.9%; */
-    --popover: 0 84% 4.9%%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 13.33%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 348 83.33% 47.06%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 40 20% 94%;
+    --secondary-foreground: 0 0% 13.33%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 40 14% 90%;
+    --muted-foreground: 41 4.3% 41%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 40 20% 94%;
+    --accent-foreground: 0 0% 13.33%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --border: 40 15.8% 88.8%;
+    --input: 40 15.8% 88.8%;
+    --ring: 348 83.33% 47.06%;
   }
 }
 
@@ -276,15 +277,27 @@
 
 /* Header chrome, same surface as the store */
 .header-custom {
-  background-color: var(--color-chrome);
-  border-bottom: 1px solid var(--color-hairline);
+  background-color: rgba(255, 255, 255, 0.85);
+  border-bottom: 1px solid var(--color-hairline-light);
   width: 100vw;
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   z-index: 50;
-  color: #ffffff;
+  color: var(--color-ink);
+}
+
+@supports (backdrop-filter: blur(12px)) {
+  .header-custom {
+    backdrop-filter: blur(14px);
+  }
+}
+
+@supports (-webkit-backdrop-filter: blur(12px)) {
+  .header-custom {
+    -webkit-backdrop-filter: blur(14px);
+  }
 }
 
 /* Add padding to body to compensate for fixed header */
@@ -293,30 +306,34 @@ body {
 }
 
 
-/* Custom selector styling - more specific */
+/* Custom selector styling - more specific: the store's light scheme.
+   Radix ships its own dark list that beats the tokens, so the trigger
+   and its parts keep the !important -- white cards on the warm band,
+   ink text, the hairline edge, crimson washing the row under the
+   cursor (the chips keep their solid crimson, not the rows). */
 [data-radix-select-trigger],
 button[data-radix-select-trigger],
 button[role="combobox"] {
-  background-color: #212121 !important;
-  color: white !important;
-  border: 1px solid #374151 !important;
+  background-color: #ffffff !important;
+  color: #222222 !important;
+  border: 1px solid #E7E4DE !important;
 }
 
 [data-radix-select-content],
 div[data-radix-select-content],
 [data-radix-popper-content-wrapper] > div,
 div[data-radix-popper-content-wrapper] {
-  background-color: #212121 !important;
-  color: white !important;
-  border: 1px solid #374151 !important;
+  background-color: #ffffff !important;
+  color: #222222 !important;
+  border: 1px solid #E7E4DE !important;
   box-shadow: 0 10px 38px -10px rgba(0, 0, 0, 0.35), 0 10px 20px -15px rgba(0, 0, 0, 0.2) !important;
 }
 
 [data-radix-select-item],
 div[data-radix-select-item],
 [role="option"] {
-  background-color: #212121 !important;
-  color: white !important;
+  background-color: #ffffff !important;
+  color: #222222 !important;
   padding: 8px 12px !important;
 }
 
@@ -326,36 +343,36 @@ div[data-radix-select-item]:hover,
 div[data-radix-select-item]:focus,
 [role="option"]:hover,
 [role="option"]:focus {
-  background-color: #374151 !important;
+  background-color: rgba(220, 20, 60, 0.08) !important;
   outline: none !important;
 }
 
 [data-radix-select-item][data-highlighted],
 div[data-radix-select-item][data-highlighted],
 [role="option"][data-highlighted] {
-  background-color: #374151 !important;
+  background-color: rgba(220, 20, 60, 0.08) !important;
 }
 
 /* Radix Select viewport and scrollarea */
 [data-radix-select-viewport] {
-  background-color: #212121 !important;
+  background-color: #ffffff !important;
 }
 
 [data-radix-scroll-area-viewport] {
-  background-color: #212121 !important;
+  background-color: #ffffff !important;
 }
 
 /* Fallback with higher specificity */
 .select-content,
 div[class*="select"] {
-  background-color: #212121 !important;
-  color: white !important;
+  background-color: #ffffff !important;
+  color: #222222 !important;
 }
 
 .select-item,
 div[class*="select"] > div {
-  background-color: #212121 !important;
-  color: white !important;
+  background-color: #ffffff !important;
+  color: #222222 !important;
 }
 
 /* Custom size for 25% larger icons */
@@ -443,7 +460,7 @@ body {
   font-size: 12px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--color-bitronics);
+  color: var(--color-bitzy);
 }
 
 .brand-kicker::before {
@@ -453,7 +470,7 @@ body {
 /* The Bitzy Labs + FLASHER lockup */
 .brand-badge {
   font-family: 'M PLUS 1 Code', ui-monospace, SFMono-Regular, monospace;
-  background: var(--color-bitronics);
+  background: var(--color-bitzy);
   color: var(--color-gold-ink);
   font-weight: 700;
   font-size: 10px;
@@ -472,7 +489,7 @@ body {
 }
 
 .band-gold {
-  background-color: var(--color-bitronics);
+  background-color: var(--color-bitzy);
   color: var(--color-gold-ink);
 }
 
@@ -480,3 +497,158 @@ body {
   background-color: #111113;
   color: #ffffff;
 }
+
+/* --- The Bitzy canvas --------------------------------------------------
+   The store's ground, tiled with our own mark: warm off-white, the two
+   crimson radials bitzystore paints behind its hero (rgba(220,20,60) is
+   #DC143C), and the mark at a few percent so it reads as texture rather
+   than as a pattern. On body rather than html, because body's background
+   is what propagates to the canvas here -- the same element the old JS
+   gradient used to paint, now painted once and for good. */
+body {
+  background-color: #F7F6F3;
+  background-image:
+    url('/pictures/logo-tile.svg'),
+    radial-gradient(800px 420px at 88% -10%, rgba(220, 20, 60, 0.10), transparent 60%),
+    radial-gradient(700px 500px at -10% 110%, rgba(220, 20, 60, 0.06), transparent 55%);
+  background-repeat: repeat, no-repeat, no-repeat;
+  background-size: 512px auto, auto, auto;
+  background-attachment: fixed, fixed, fixed;
+}
+
+/* The flasher's own band: the store's ground under the store's glow,
+   our mark tiled at the page's 512px cell, and a lift off white at
+   the top so the band separates from the fixed bar without going
+   dark -- the tool room turned into another room of the house. The
+   glow drifts on a slow loop; the reduce block below stops it. */
+.bitzy-hero {
+  background-color: #F7F6F3;
+  background-image:
+    url('/pictures/logo-tile.svg'),
+    radial-gradient(900px 480px at 85% -20%, rgba(220, 20, 60, 0.10), transparent 60%),
+    radial-gradient(760px 520px at -12% 115%, rgba(220, 20, 60, 0.06), transparent 55%),
+    linear-gradient(180deg, #ffffff 0%, #F7F6F3 62%, #F7F6F3 100%);
+  background-repeat: repeat, no-repeat, no-repeat, no-repeat;
+  background-size: 512px auto, auto, auto, auto;
+  animation: bitzy-glow 14s ease-in-out infinite alternate;
+}
+
+/* --- Motion -------------------------------------------------------------
+   Small on purpose: the store's two-pixel button lift and crimson shadow,
+   the strip and the cards rising to meet the pointer, sections arriving
+   on the way in, and the hero's glow drifting. All of it stops for
+   readers who ask for less motion -- the scroll-timed reveals included,
+   which is why the reduce block resets `animation` itself rather than
+   its duration: a duration does not stop a view timeline. */
+@media (prefers-reduced-motion: no-preference) {
+  body {
+    animation: bitzy-settle 0.5s ease-out both;
+  }
+
+  button.bg-primary,
+  a.bg-primary,
+  button[class*="bg-[var(--color-bitzy)]"] {
+    transition:
+      transform 0.15s ease,
+      box-shadow 0.15s ease,
+      background-color 0.15s ease;
+  }
+
+  button.bg-primary:hover:not(:disabled),
+  a.bg-primary:hover:not(:disabled),
+  button[class*="bg-[var(--color-bitzy)]"]:hover:not(:disabled) {
+    transform: translateY(-2px);
+    background-color: #e8455f;
+    box-shadow: 0 10px 26px rgba(220, 20, 60, 0.32);
+  }
+
+  main > a.group {
+    transition:
+      transform 0.18s ease,
+      box-shadow 0.18s ease,
+      opacity 0.18s ease;
+  }
+
+  main > a.group:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px rgba(220, 20, 60, 0.18);
+  }
+
+  #features .grid > * {
+    transition:
+      transform 0.22s ease,
+      box-shadow 0.22s ease,
+      border-color 0.22s ease;
+  }
+
+  #features .grid > *:hover {
+    transform: translateY(-4px);
+    border-color: rgba(220, 20, 60, 0.35);
+    box-shadow:
+      0 8px 20px rgba(34, 34, 34, 0.08),
+      0 30px 70px rgba(34, 34, 34, 0.12);
+  }
+}
+
+/* Sections arrive mapped to the scroll itself where the browser can do
+   that, and not at all where it cannot: outside @supports these rules
+   are never written and everything simply renders in place. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    #features > div,
+    main > a.group {
+      animation: bitzy-rise linear both;
+      animation-timeline: view();
+      animation-range: entry 6% cover 26%;
+    }
+  }
+}
+
+@keyframes bitzy-settle {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes bitzy-rise {
+  from {
+    opacity: 0;
+    translate: 0 16px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes bitzy-glow {
+  from {
+    background-position: 0 0, 0 0, 0 0, 0 0;
+  }
+  to {
+    background-position: 0 0, 36px -22px, -30px 18px, 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  button.bg-primary:hover,
+  a.bg-primary:hover,
+  button[class*="bg-[var(--color-bitzy)]"]:hover,
+  main > a.group:hover,
+  #features .grid > *:hover,
+  [class*="translate"]:hover {
+    transform: none !important;
+    translate: none !important;
+  }
+}
+

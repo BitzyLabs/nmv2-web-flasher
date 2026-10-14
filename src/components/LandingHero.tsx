@@ -39,14 +39,14 @@ const basePath = '';
 const imageFor = (factoryPath: string, keeping: boolean) =>
   keeping ? factoryPath.replace(/_factory\.bin$/, '_firmware.bin') : factoryPath;
 
-// The Bitronics signature: a white headline with exactly one word in gold.
+// The Bitzy Labs signature: a white headline with exactly one word in gold.
 function Headline({ text }: { text: string }) {
   const words = text.trim().split(' ');
   const accent = words.pop();
 
   return (
     <>
-      {words.join(' ')} <span className="text-bitronics">{accent}</span>
+      {words.join(' ')} <span className="text-bitzy">{accent}</span>
     </>
   );
 }
@@ -177,11 +177,8 @@ export default function LandingHero() {
     const isChromium = /chrome|chromium|crios|edge/i.test(userAgent);
     setIsChromiumBased(isChromium);
 
-    // Initialize default background
-    document.body.style.background = `linear-gradient(rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.85)), url('${basePath}/pictures/Bitronics_hw.png')`;
-    document.body.style.backgroundSize = 'cover';
-    document.body.style.backgroundPosition = 'center';
-    document.body.style.backgroundAttachment = 'fixed';
+    // The canvas is painted in CSS now: the store's warm ground with our
+    // mark tiled through it. Nothing to set per load.
 
     // Load every device's boards from its manifests
     loadAllBoards();
@@ -1138,29 +1135,7 @@ export default function LandingHero() {
     setKeepConfiguration(false);
     setIsModalOpen(false);
 
-    // A device paints the page behind it. Its own banner if it has one, the
-    // NerdMiner keeps the picture it always had, everything else the default.
-    // Doing it as a backdrop rather than a band costs no vertical space, which
-    // is what was pushing the rest of the page below the fold.
-    const source = sourceFor(name);
-    const backdrop =
-      source?.banner ??
-      (name === 'NerdMiner' ? '/pictures/fondoNM3.png' : '/pictures/Bitronics_hw.png');
-
-    const paint = (image: string) => {
-      document.body.style.background = `linear-gradient(rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.85)), url('${basePath}${image}')`;
-      document.body.style.backgroundSize = 'cover';
-      document.body.style.backgroundPosition = 'center';
-      document.body.style.backgroundAttachment = 'fixed';
-    };
-
-    // A banner that has not been added yet should not leave the page bare.
-    const probe = new Image();
-    probe.onload = () => paint(backdrop);
-    probe.onerror = () => paint('/pictures/Bitronics_hw.png');
-    probe.src = `${basePath}${backdrop}`;
-
-    document.body.classList.remove('nerdminer-bg');
+    // Every device shares the same canvas; CSS painted it once at load.
   };
 
   if (!isChromiumBased) {
@@ -1169,7 +1144,7 @@ export default function LandingHero() {
         <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none mb-4">
           {t('errors.browserCompatibility.title')}
         </h1>
-        <p className="mx-auto max-w-[700px] text-white/60 md:text-xl">
+        <p className="mx-auto max-w-[700px] text-[var(--color-muted-warm)] md:text-xl">
           {t('errors.browserCompatibility.description')}
         </p>
       </div>
@@ -1178,19 +1153,19 @@ export default function LandingHero() {
 
   return (
     <>
-      <Header onOpenPanel={() => setIsPanelOpen(true)} />
-      {/* The hero always sits on a dark photograph, whatever the page theme is
-          set to, so its contents always render in the dark palette. Without
-          this the headline turns near-black on a near-black background. */}
-      <section className="dark w-full py-10 text-white md:py-14">
+      <Header onTogglePanel={() => setIsPanelOpen((wasOpen) => !wasOpen)} panelOpen={isPanelOpen} />
+      {/* The hero sits on the store's own light band -- warm ground, crimson
+          glow and our mark tiled through it -- so its contents render in ink
+          like every other band on the page. */}
+      <section className="bitzy-hero w-full py-10 text-[var(--color-ink)] md:py-14">
         <div className="container px-4 md:px-6">
           <div className="flex flex-col items-center space-y-4 text-center gap-8">
             {selectedDevice === '' ? (
               <div className="mb-10 space-y-2">
-                <h1 className="font-display text-3xl font-bold tracking-tighter text-white sm:text-4xl md:text-5xl">
+                <h1 className="font-display text-3xl font-bold tracking-tighter text-[var(--color-ink)] sm:text-4xl md:text-5xl">
                   <Headline text={t('hero.title')} />
                 </h1>
-                <p className="mx-auto max-w-[700px] text-white/60 md:text-lg">
+                <p className="mx-auto max-w-[700px] text-[var(--color-muted-warm)] md:text-lg">
                   {t('hero.description')}
                 </p>
               </div>
@@ -1199,7 +1174,7 @@ export default function LandingHero() {
                 <p className="brand-kicker">
                   {heroSource?.intro?.kicker ?? heroSource?.tagline ?? selectedDevice}
                 </p>
-                <h1 className="font-display text-3xl font-bold tracking-tight text-white sm:text-4xl">
+                <h1 className="font-display text-3xl font-bold tracking-tight text-[var(--color-ink)] sm:text-4xl">
                   {selectedDevice}
                 </h1>
               </div>
@@ -1288,14 +1263,14 @@ export default function LandingHero() {
             {(verifying || verification || verifyError) && (
               <div className="mx-auto w-full max-w-lg">
                 {verifying && (
-                  <div className="flex items-center justify-center gap-2 text-xs text-white/50">
+                  <div className="flex items-center justify-center gap-2 text-xs text-[var(--color-muted-warm)]">
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     Checking this firmware…
                   </div>
                 )}
 
                 {verifyError && !verifying && (
-                  <div className="flex items-center justify-center gap-2 rounded-lg border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 px-3 py-2 text-xs text-white/80">
+                  <div className="flex items-center justify-center gap-2 rounded-lg border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 px-3 py-2 text-xs text-[var(--color-ink)]/80">
                     <AlertTriangle className="h-4 w-4 shrink-0 text-[var(--color-danger)]" />
                     {verifyError}
                   </div>
@@ -1305,12 +1280,12 @@ export default function LandingHero() {
                   <div className="rounded-lg border border-[var(--color-success)]/40 bg-[var(--color-success)]/10 px-3 py-2.5">
                     <div className="flex items-center justify-center gap-2">
                       <CheckCircle2 className="h-4 w-4 shrink-0 text-[var(--color-success)]" />
-                      <span className="text-sm font-semibold text-white">
+                      <span className="text-sm font-semibold text-[var(--color-ink)]">
                         {verification.upstream ? 'Verified firmware' : 'Checksum matches'}
                       </span>
                     </div>
 
-                    <p className="mt-1 text-center text-[11px] leading-relaxed text-white/50">
+                    <p className="mt-1 text-center text-[11px] leading-relaxed text-[var(--color-muted-warm)]">
                       {verification.upstream ? (
                         <>
                           Hashes to what{' '}
@@ -1331,7 +1306,7 @@ export default function LandingHero() {
                       )}
                     </p>
 
-                    <p className="font-data mt-1.5 break-all text-center text-[10px] text-white/25">
+                    <p className="font-data mt-1.5 break-all text-center text-[10px] text-[var(--color-ink)]/40">
                       {verification.digest}
                     </p>
                   </div>
@@ -1348,11 +1323,11 @@ export default function LandingHero() {
                     id="keepConfiguration"
                     checked={keepConfiguration}
                     onChange={(e) => setKeepConfiguration(e.target.checked)}
-                    className="w-4 h-4 accent-bitronics bg-gray-100 border-gray-300 rounded focus:ring-bitronics dark:focus:ring-bitronics dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                    className="w-4 h-4 accent-bitzy bg-gray-100 border-gray-300 rounded focus:ring-bitzy focus:ring-2"
                   />
                   <label
                     htmlFor="keepConfiguration"
-                    className="text-sm font-medium text-gray-900 dark:text-gray-300"
+                    className="text-sm font-medium text-[var(--color-ink)]"
                   >
                     {t('hero.keepConfiguration')}
                   </label>
@@ -1365,11 +1340,11 @@ export default function LandingHero() {
                       id="customAPName"
                       checked={customAPName}
                       onChange={(e) => setCustomAPName(e.target.checked)}
-                      className="w-4 h-4 accent-bitronics bg-gray-100 border-gray-300 rounded focus:ring-bitronics dark:focus:ring-bitronics dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                      className="w-4 h-4 accent-bitzy bg-gray-100 border-gray-300 rounded focus:ring-bitzy focus:ring-2"
                     />
                     <label
                       htmlFor="customAPName"
-                      className="text-sm font-medium text-gray-900 dark:text-gray-300"
+                      className="text-sm font-medium text-[var(--color-ink)]"
                     >
                       Custom Access Point Name
                     </label>
@@ -1384,7 +1359,7 @@ export default function LandingHero() {
                       onChange={(e) => setApName(e.target.value)}
                       placeholder="Enter AP name (max 31 chars)"
                       maxLength={31}
-                      className="w-64 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-bitronics focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
+                      className="w-64 px-3 py-2 text-sm border border-[var(--color-hairline-light)] bg-white rounded-md text-[var(--color-ink)] placeholder:text-[var(--color-muted-warm)] focus:outline-none focus:ring-2 focus:ring-bitzy focus:border-transparent"
                     />
                     {apName && !validateSSID(apName) && (
                       <p className="text-xs text-red-500">
@@ -1447,7 +1422,7 @@ export default function LandingHero() {
                   <Download className="ml-2 h-4 w-4" />
                 </Button>
               </div>
-              <p className="mx-auto max-w-[400px] text-white/50 md:text-m">
+              <p className="mx-auto max-w-[400px] text-[var(--color-muted-warm)] md:text-m">
                 {t('hero.loggingDescription')}
               </p>
               {statusKind && (
@@ -1457,12 +1432,12 @@ export default function LandingHero() {
                       ? 'border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10'
                       : statusKind === 'done'
                         ? 'border-[var(--color-success)]/40 bg-[var(--color-success)]/10'
-                        : 'border-[var(--color-hairline)] bg-[var(--color-surface)]'
+                        : 'border-[var(--color-hairline-light)] bg-white'
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     {statusKind === 'busy' && (
-                      <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-[var(--color-bitronics)]" />
+                      <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-[var(--color-bitzy)]" />
                     )}
                     {statusKind === 'done' && (
                       <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-success)]" />
@@ -1470,22 +1445,22 @@ export default function LandingHero() {
                     {statusKind === 'error' && (
                       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-danger)]" />
                     )}
-                    <p className="text-sm font-medium leading-snug text-white">{status}</p>
+                    <p className="text-sm font-medium leading-snug text-[var(--color-ink)]">{status}</p>
                   </div>
 
                   {isFlashing && progress !== null && (
-                    <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-white/10">
+                    <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-[var(--color-hairline-light)]">
                       <div
-                        className="h-full rounded-full bg-[var(--color-bitronics)] transition-all duration-200"
+                        className="h-full rounded-full bg-[var(--color-bitzy)] transition-all duration-200"
                         style={{ width: `${progress}%` }}
                       />
                     </div>
                   )}
 
                   {verification && (
-                    <div className="mt-3 border-t border-white/10 pt-2.5">
+                    <div className="mt-3 border-t border-[var(--color-hairline-light)] pt-2.5">
                       {verification.upstream ? (
-                        <p className="text-xs leading-relaxed text-white/60">
+                        <p className="text-xs leading-relaxed text-[var(--color-muted-warm)]">
                           <span className="text-[var(--color-success)]">Verified.</span> This file
                           hashes to what{' '}
                           <span className="font-data">{verification.upstream.repo}</span> published
@@ -1494,19 +1469,19 @@ export default function LandingHero() {
                           GitHub.
                         </p>
                       ) : (
-                        <p className="text-xs leading-relaxed text-white/60">
+                        <p className="text-xs leading-relaxed text-[var(--color-muted-warm)]">
                           The download matches the hash on file. The published release could not be
                           reached, so it was not cross-checked against it.
                         </p>
                       )}
-                      <p className="font-data mt-1.5 break-all text-[10px] text-white/30">
+                      <p className="font-data mt-1.5 break-all text-[10px] text-[var(--color-ink)]/40">
                         {verification.digest}
                       </p>
                     </div>
                   )}
 
                   {nextStep && (
-                    <p className="mt-2.5 text-xs leading-relaxed text-white/50">{nextStep}</p>
+                    <p className="mt-2.5 text-xs leading-relaxed text-[var(--color-muted-warm)]">{nextStep}</p>
                   )}
                 </div>
               )}

@@ -1,7 +1,7 @@
 
-# Bitronics Web Flasher
+# Bitzy Labs Web Flasher
 
-The Bitronics Web Flasher is the open source tool that provides you an easy solution to flash a factory file to you device.
+The Bitzy Labs Web Flasher is the open source tool that provides you an easy solution to flash a factory file to you device.
 
 ## Flashing process
 
@@ -13,10 +13,10 @@ You can use Docker for compiling the application and to run it locally by
 
 ```bash
 # build the image
-docker build . -f Dockerfile -t bitronics-web-flasher
+docker build . -f Dockerfile -t nmv2-web-flasher
 
 # run the container
-docker run --rm -d -p 3000:3000 bitronics-web-flasher
+docker run --rm -d -p 3000:3000 nmv2-web-flasher
 ```
 
 and access it by `http://localhost:3000`

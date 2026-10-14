@@ -1,6 +1,6 @@
 # Firmware Automation
 
-This document explains how the automated firmware update system works for the Bitronics Web Flasher.
+This document explains how the automated firmware update system works for the Bitzy Labs Web Flasher.
 
 ## Overview
 

@@ -10,16 +10,16 @@ const SITE_LINKS = [
 function Notice({ title, body, onClose }: { title: string; body: string; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="relative w-full max-w-md rounded-xl border border-[var(--color-hairline)] bg-[var(--color-surface)] p-6 text-white">
+      <div className="relative w-full max-w-md rounded-xl border border-[var(--color-hairline-light)] bg-white p-6 text-[var(--color-ink)]">
         <button
           onClick={onClose}
           aria-label="Close"
-          className="absolute right-4 top-4 text-white/50 transition-colors hover:text-white"
+          className="absolute right-4 top-4 text-[var(--color-muted-warm)] transition-colors hover:text-[var(--color-bitzy)]"
         >
           <X size={20} />
         </button>
         <h2 className="font-display text-lg font-bold">{title}</h2>
-        <p className="mt-2 text-sm text-white/60">{body}</p>
+        <p className="mt-2 text-sm text-[var(--color-muted-warm)]">{body}</p>
       </div>
     </div>
   );
@@ -28,7 +28,7 @@ function Notice({ title, body, onClose }: { title: string; body: string; onClose
 export default function Footer() {
   const [notice, setNotice] = useState<'privacy' | 'terms' | null>(null);
 
-  const linkClass = 'text-sm text-white/60 transition-colors hover:text-white';
+  const linkClass = 'text-sm text-[var(--color-muted-warm)] transition-colors hover:text-[var(--color-bitzy)]';
 
   return (
     <>
@@ -47,18 +47,18 @@ export default function Footer() {
         />
       )}
 
-      <footer className="mt-16 w-full border-t border-[var(--color-hairline)] bg-[var(--color-chrome)] text-white">
+      <footer className="mt-8 w-full border-t border-[var(--color-hairline-light)] bg-white text-[var(--color-ink)]">
         <div className="mx-auto grid w-full max-w-screen-xl gap-10 px-4 py-12 md:grid-cols-2 lg:px-6">
           <div>
             <div className="flex items-center gap-2.5">
               <img
-                src={`${basePath}/pictures/bitzylabs-logo-dark.png`}
+                src={`${basePath}/pictures/bitzylabs-logo-light.png`}
                 alt="Bitzy Labs"
                 className="h-7 w-auto object-contain"
               />
               <span className="brand-badge">Flasher</span>
             </div>
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/60">
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-[var(--color-muted-warm)]">
               Open source firmware for open source hardware, flashed straight from the browser.
             </p>
           </div>
@@ -82,31 +82,61 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-[var(--color-hairline)]">
-          <div className="mx-auto flex w-full max-w-screen-xl flex-col-reverse items-center gap-3 px-4 py-5 text-xs text-white/40 sm:flex-row sm:justify-between lg:px-6">
+        <div className="border-t border-[var(--color-hairline-light)]">
+          <div className="mx-auto flex w-full max-w-screen-xl flex-col-reverse items-center gap-3 px-4 py-5 text-xs text-[var(--color-muted-warm)] sm:flex-row sm:justify-between lg:px-6">
             <div className="flex items-center gap-4">
               <span>© {new Date().getFullYear()} BitzyLabs</span>
               <button
                 onClick={() => setNotice('terms')}
-                className="transition-colors hover:text-white/70"
+                className="transition-colors hover:text-[var(--color-bitzy)]"
               >
                 Terms
               </button>
               <button
                 onClick={() => setNotice('privacy')}
-                className="transition-colors hover:text-white/70"
+                className="transition-colors hover:text-[var(--color-bitzy)]"
               >
                 Privacy
               </button>
             </div>
-            <a
-              href="https://github.com/WantClue"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="transition-colors hover:text-white/70"
-            >
-              Credits to WantClue
-            </a>
+            <div className="flex flex-wrap items-center gap-x-3">
+              <span>Credits to</span>
+              <a
+                href="https://github.com/WantClue"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="transition-colors hover:text-[var(--color-bitzy)]"
+              >
+                WantClue
+              </a>
+              <span aria-hidden="true">·</span>
+              <a
+                href="https://github.com/BitMaker-hub/bitronics-web-flasher"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="transition-colors hover:text-[var(--color-bitzy)]"
+              >
+                BitMaker
+              </a>
+              <span aria-hidden="true">·</span>
+              <a
+                href="https://github.com/Gamadril/stm-serial-flasher"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="transition-colors hover:text-[var(--color-bitzy)]"
+              >
+                Gamadril
+              </a>
+              <span aria-hidden="true">·</span>
+              <a
+                href="https://github.com/yanxke/stm32webflash"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="transition-colors hover:text-[var(--color-bitzy)]"
+              >
+                Yanxke
+              </a>
+            </div>
           </div>
         </div>
       </footer>

@@ -9,10 +9,12 @@ const SITE_LINKS = [
 ];
 
 interface HeaderProps {
-  onOpenPanel: () => void;
+  onTogglePanel: () => void;
+  /** Whether the steps drawer is showing, for aria-expanded on the triggers. */
+  panelOpen: boolean;
 }
 
-export default function Header({ onOpenPanel }: HeaderProps) {
+export default function Header({ onTogglePanel, panelOpen }: HeaderProps) {
   const { t } = useTranslation();
 
   return (
@@ -20,12 +22,12 @@ export default function Header({ onOpenPanel }: HeaderProps) {
       <div className="mx-auto flex h-full w-full max-w-screen-xl items-center px-4 lg:px-6">
         {/* The Bitzy Labs + FLASHER lockup */}
         <a
-          href="https://www.bitzylabs.com"
+          href="https://flasher.bitzylabs.com"
           className="flex flex-1 items-center gap-3 transition-opacity hover:opacity-80"
         >
-          {/* The bar is always dark, so the wordmark is always the light one */}
+          {/* The bar is the store's white blur, so the wordmark is the ink one */}
           <img
-            src={`${basePath}/pictures/bitzylabs-logo-dark.png`}
+            src={`${basePath}/pictures/bitzylabs-logo-light.png`}
             alt="Bitzy Labs"
             className="h-8 w-auto object-contain"
           />
@@ -39,17 +41,25 @@ export default function Header({ onOpenPanel }: HeaderProps) {
               href={link.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-medium text-white/70 transition-colors hover:text-white"
+              className="text-base font-medium text-[var(--color-muted-warm)] transition-colors hover:text-[var(--color-bitzy)]"
             >
               {link.label}
             </a>
           ))}
+          <button
+            onClick={onTogglePanel}
+            aria-expanded={panelOpen}
+            className="text-base font-medium text-[var(--color-muted-warm)] transition-colors hover:text-[var(--color-bitzy)]"
+          >
+            {t('header.instructions')}
+          </button>
         </nav>
 
         <div className="flex flex-1 items-center justify-end gap-4 sm:gap-5">
           <button
-            onClick={onOpenPanel}
-            className="text-sm font-medium text-white/70 transition-colors hover:text-white"
+            onClick={onTogglePanel}
+            aria-expanded={panelOpen}
+            className="text-sm font-medium text-[var(--color-muted-warm)] transition-colors hover:text-[var(--color-bitzy)] md:hidden"
           >
             {t('header.instructions')}
           </button>

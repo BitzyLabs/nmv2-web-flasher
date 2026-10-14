@@ -51,7 +51,7 @@ export default function DeviceIntro({
                   href={shop}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-bitronics)] px-4 py-2 text-sm font-semibold text-[var(--color-gold-ink)] transition-opacity hover:opacity-90"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-bitzy)] px-4 py-2 text-sm font-semibold text-[var(--color-gold-ink)] transition-opacity hover:opacity-90"
                 >
                   Buy one ready to use
                   <ArrowUpRight className="h-4 w-4" />

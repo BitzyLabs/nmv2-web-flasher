@@ -82,14 +82,14 @@ export default function Releases() {
                 href={latest.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group flex flex-col rounded-xl border border-white/10 bg-white/[0.04] p-5 transition-colors hover:border-[var(--color-bitronics)] hover:bg-white/[0.06]"
+                className="group flex flex-col rounded-xl border border-white/10 bg-white/[0.04] p-5 transition-colors hover:border-[var(--color-bitzy)] hover:bg-white/[0.06]"
               >
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="font-data text-[13px] leading-tight text-white">
                     <span className="text-white/40">{owner}/</span>
                     {name}
                   </h3>
-                  <ArrowUpRight className="h-4 w-4 shrink-0 text-white/25 transition-colors group-hover:text-[var(--color-bitronics)]" />
+                  <ArrowUpRight className="h-4 w-4 shrink-0 text-white/25 transition-colors group-hover:text-[var(--color-bitzy)]" />
                 </div>
 
                 <div className="mt-2 flex flex-wrap gap-1">
@@ -104,7 +104,7 @@ export default function Releases() {
                 </div>
 
                 <div className="mt-4 flex flex-wrap items-center gap-2">
-                  <span className="font-data text-sm text-[var(--color-bitronics)]">
+                  <span className="font-data text-sm text-[var(--color-bitzy)]">
                     {latest.tag}
                   </span>
                   <span className="font-data text-[11px] text-white/30">

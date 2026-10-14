@@ -88,8 +88,8 @@ export default function BoardPicker({
       onClick={onClick}
       className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
         active
-          ? 'border-[var(--color-bitronics)] bg-[var(--color-bitronics)] text-[var(--color-gold-ink)]'
-          : 'border-[var(--color-hairline)] text-white/60 hover:border-white/30 hover:text-white'
+          ? 'border-[var(--color-bitzy)] bg-[var(--color-bitzy)] text-[var(--color-gold-ink)]'
+          : 'border-[var(--color-hairline-light)] text-[var(--color-muted-warm)] hover:border-[var(--color-ink)]/50 hover:text-[var(--color-ink)]'
       }`}
     >
       {label}
@@ -113,15 +113,15 @@ export default function BoardPicker({
           isOpen ? 'scale-100 opacity-100' : 'pointer-events-none scale-95 opacity-0'
         }`}
       >
-        <div className="h-fit w-full max-w-5xl overflow-hidden rounded-2xl border border-[var(--color-hairline)] bg-[var(--color-chrome)] shadow-2xl">
-          <div className="sticky top-0 z-10 border-b border-[var(--color-hairline)] bg-[var(--color-chrome)] px-6 py-5">
+        <div className="h-fit w-full max-w-5xl overflow-hidden rounded-2xl border border-[var(--color-hairline-light)] bg-white shadow-2xl">
+          <div className="sticky top-0 z-10 border-b border-[var(--color-hairline-light)] bg-white px-6 py-5">
             <div className="flex items-start justify-between">
               <div>
                 <p className="brand-kicker">Step 2</p>
-                <h2 className="font-display text-xl font-bold tracking-tight text-white">
+                <h2 className="font-display text-xl font-bold tracking-tight text-[var(--color-ink)]">
                   Choose your board
                 </h2>
-                <p className="mt-0.5 text-sm text-white/40">
+                <p className="mt-0.5 text-sm text-[var(--color-muted-warm)]">
                   {boards.length} {boards.length === 1 ? 'board' : 'boards'} for the{' '}
                   {source?.device}
                 </p>
@@ -129,7 +129,7 @@ export default function BoardPicker({
               <button
                 onClick={onClose}
                 aria-label="Close"
-                className="rounded-lg p-1.5 text-white/50 transition-colors hover:bg-white/5 hover:text-white"
+                className="rounded-lg p-1.5 text-[var(--color-muted-warm)] transition-colors hover:bg-black/5 hover:text-[var(--color-bitzy)]"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -141,7 +141,7 @@ export default function BoardPicker({
                   <button
                     onClick={detect}
                     disabled={detecting}
-                    className="flex items-center gap-1.5 rounded-full bg-[var(--color-bitronics)] px-3 py-1 text-xs font-semibold text-[var(--color-gold-ink)] transition-opacity hover:opacity-90 disabled:opacity-60"
+                    className="flex items-center gap-1.5 rounded-full bg-[var(--color-bitzy)] px-3 py-1 text-xs font-semibold text-[var(--color-gold-ink)] transition-opacity hover:opacity-90 disabled:opacity-60"
                   >
                     {detecting ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -163,24 +163,24 @@ export default function BoardPicker({
 
                 {boards.length > 8 && (
                   <div className="relative ml-auto">
-                    <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/30" />
+                    <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--color-muted-warm)]" />
                     <input
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       placeholder="Search boards"
-                      className="w-44 rounded-full border border-[var(--color-hairline)] bg-black/30 py-1 pl-8 pr-3 text-xs text-white placeholder:text-white/30 focus:border-[var(--color-bitronics)] focus:outline-none"
+                      className="w-44 rounded-full border border-[var(--color-hairline-light)] bg-white py-1 pl-8 pr-3 text-xs text-[var(--color-ink)] placeholder:text-[var(--color-muted-warm)] focus:border-[var(--color-bitzy)] focus:outline-none"
                     />
                   </div>
                 )}
               </div>
             )}
 
-            {detectNote && <p className="font-data mt-3 text-[11px] text-white/50">{detectNote}</p>}
+            {detectNote && <p className="font-data mt-3 text-[11px] text-[var(--color-muted-warm)]">{detectNote}</p>}
           </div>
 
           <div className="px-6 py-6">
             {!everOpened ? null : visible.length === 0 ? (
-              <p className="py-10 text-center text-sm text-white/40">
+              <p className="py-10 text-center text-sm text-[var(--color-muted-warm)]">
                 No board matches that. Try clearing the filters.
               </p>
             ) : (
@@ -193,15 +193,15 @@ export default function BoardPicker({
                       onClick={() => onSelect(board.name)}
                       className={`group flex flex-col rounded-xl border p-3 text-left transition-all duration-200 hover:-translate-y-0.5 ${
                         isSelected
-                          ? 'border-[var(--color-bitronics)] bg-[var(--color-chrome-light)]'
-                          : 'border-[var(--color-hairline)] bg-[var(--color-surface)] hover:border-white/25'
+                          ? 'border-[var(--color-bitzy)] bg-[var(--color-band-light)]'
+                          : 'border-[var(--color-hairline-light)] bg-white hover:border-[var(--color-bitzy)]/50'
                       }`}
                     >
                       <BoardArt board={board.file} className="aspect-[5/4] w-full" />
-                      <span className="mt-3 text-sm font-medium leading-tight text-white">
+                      <span className="mt-3 text-sm font-medium leading-tight text-[var(--color-ink)]">
                         {board.name}
                       </span>
-                      <span className="font-data mt-1.5 text-[10px] uppercase tracking-wide text-white/35">
+                      <span className="font-data mt-1.5 text-[10px] uppercase tracking-wide text-[var(--color-muted-warm)]">
                         {chipOf(board.file)}
                       </span>
                     </button>

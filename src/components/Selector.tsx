@@ -49,12 +49,12 @@ export default function BoardVersionSelector({
           <SelectItem key={val} value={val}>
             <span className={mono ? 'font-data' : undefined}>{val}</span>
             {markFirstAsLatest && index === 0 && (
-              <span className="ml-2 rounded bg-bitronics px-1.5 py-0.5 text-[10px] font-semibold text-white align-middle">
+              <span className="ml-2 rounded bg-bitzy px-1.5 py-0.5 text-[10px] font-semibold text-white align-middle">
                 Latest
               </span>
             )}
             {badges?.[val] && (
-              <span className="ml-2 rounded border border-white/25 px-1.5 py-0.5 text-[10px] font-semibold text-white/60 align-middle">
+              <span className="ml-2 rounded border border-[var(--color-hairline-light)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--color-muted-warm)] align-middle">
                 {badges[val]}
               </span>
             )}
