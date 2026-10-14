@@ -39,6 +39,15 @@ jobs:
             git remote add upstream https://github.com/BitMaker-hub/bitronics-web-flasher.git
           fi
 
+      # The sync script builds the site to prove the reset did not break it.
+      # Pin the same Node the deploy uses so a runner image bump cannot make
+      # the 3am sync fail for reasons that have nothing to do with upstream.
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
       - name: Sync and re-brand
         run: ./scripts/sync-upstream.sh
 
