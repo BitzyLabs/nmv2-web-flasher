@@ -15,21 +15,23 @@
  * was rebuilt from when the reader pointed at it.
  *
  * That is the whole trick: the ST-Link firmware does the SWD protocol, so
- * stopping the core, unlocking the flash controller, erasing pages and
- * programming halfwords are all plain memory reads and writes. Halting and
- * running go through DHCSR exactly the way stlink's own APIv2 step/run
- * emulation does, so nothing here depends on which command dialect the
- * dongle speaks beyond entering SWD mode -- which is negotiated, with the
- * older API as the fallback.
+ * stopping the core and reading or writing memory are plain commands.
+ * Halting and running go through DHCSR exactly the way stlink's own APIv2
+ * step/run emulation does, so nothing here depends on which command
+ * dialect the dongle speaks beyond entering SWD mode -- which is
+ * negotiated, with the older API as the fallback.
  *
- * Programming follows RM0008 for the F103: unlock with the two keys, set
- * PER and hand each 1 KiB page address to STR, set PG while halfwords are
- * written (a 32-bit store carries two, the same as st-flash's SRAM
- * loader), and poll FLASH_SR's BSY after every step -- one millisecond
- * first, so the operation is latched before the first sample, then check
- * the error bits. Nothing is trusted: every byte is read back and
- * compared before the chip is released, and a mismatch is reported with
- * the address it broke at.
+ * Programming is the one thing that is not a plain write, and the reason
+ * the flow below hands it to the chip instead of the link: the F103
+ * programs its flash in half-words with PG re-armed before every one
+ * (RM0008), and the ST-Link command set can only write 8- or 32-bit
+ * values -- there is no half-word command to send, and word stores never
+ * program. So a 140-byte Thumb loader runs on the core, page by page,
+ * exactly the way stlink's own flasher and the donor do it: erase, then
+ * half-word by half-word, polling FLASH_SR and stopping on the error
+ * bits. The link's job shrinks to loading the loader and its page,
+ * setting PC, and reading every programmed byte back before the chip is
+ * released -- a mismatch is reported with the address it broke at.
  *
  * WebUSB needs the device node to be openable (udev/0666 -- checked on
  * the bench machine), no kernel driver claiming the debug interface (the
@@ -96,30 +98,129 @@ const AIRCR = 0xe000ed0c;
 const SYSRESETREQ = 0x05fa0004;
 const DBGMCU_IDCODE = 0xe0042000;
 
-const FLASH_KEYR = 0x40022004;
-const FLASH_SR = 0x4002200c;
 const FLASH_CR = 0x40022010;
-const FLASH_AR = 0x40022014;
-const FLASH_KEY1 = 0x45670123;
-const FLASH_KEY2 = 0xcdef89ab;
-const SR_BSY = 0x01;
 const SR_PGERR = 0x04;
 const SR_WRPRTERR = 0x10;
-const SR_EOP = 0x20;
-const SR_CLEAR = SR_EOP | SR_PGERR | SR_WRPRTERR; // write-1-to-clear
-const CR_PG = 0x01;
-const CR_PER = 0x02;
-const CR_STRT = 0x40;
-const CR_LOCK = 0x80000000;
+// FLASH_CR.LOCK is bit 7 on the F1. Bit 31 is the F4's layout, and reading
+// that instead made every unlock check vacuous: a locked controller reports
+// clear, and then ignores every CR and AR write that follows -- erase and
+// program both sail through and the chip reads back exactly as it was.
+const CR_LOCK = 0x80;
 const FLASH_BASE = 0x08000000;
 const PAGE_SIZE = 0x400;
+
+/** CoreDebug register-select indices, ARM's fixed debug numbering. */
+const REG_PC = 15;
+const REG_XPSR = 16;
+const REG_MSP = 17;
+const DEBUG_WRITEREG = 0x34;
+
+/** Where the loader, its mailbox, and the page it works on live in SRAM. */
+const LOADER_ADDR = 0x20000000;
+const LOADER_MAILBOX = 0x20000400;
+const LOADER_PAGEBUF = 0x20000800;
+const LOADER_STACK_TOP = 0x20001ff0;
+const LOADER_TIMEOUT = 15_000; // a page is ~40 ms erase + ~50 ms program; this is slack
+
+/**
+ * The flash algorithm, run by the core rather than poked in from outside:
+ * the F103 programs in half-words with PG re-armed before every one
+ * (RM0008), and this protocol can only write 8- or 32-bit values over the
+ * debug link -- there is no half-word command to send. So the sequence
+ * RM0008 asks for executes on the core itself, in Thumb, 140 bytes at
+ * LOADER_ADDR, with a 16-byte mailbox at LOADER_MAILBOX carrying the page
+ * address in, and status out: 2 is done, 4 refused (FLASH_SR lands in the
+ * error word), and 0 means it never finished -- a locked or absent
+ * controller, which the host names by reading FLASH_CR back.
+ *
+ * Source, assembled with Keystone (Thumb, ARMv7-M):
+ *
+ *   ldr r0, =0x20000400     @ mailbox
+ *   ldr r1, [r0, #4]        @ page address
+ *   ldr r2, =0x40022000     @ flash registers
+ *   ldr r3, =0x45670123     @ unlock: the two keys into KEYR
+ *   str r3, [r2, #4]
+ *   ldr r3, =0xcdef89ab
+ *   str r3, [r2, #4]
+ *   movs r3, #0x34          @ clear stale EOP/error flags
+ *   str r3, [r2, #0x0c]
+ *   movs r3, #2             @ erase: CR = PER, AR = address, CR = PER|STRT
+ *   str r3, [r2, #0x10]
+ *   str r1, [r2, #0x14]
+ *   movs r3, #0x42
+ *   str r3, [r2, #0x10]
+ *   bl op_wait
+ *   movs r3, #0             @ PER off
+ *   str r3, [r2, #0x10]
+ *   ldr r4, =0x20000800     @ 512 half-words out of the page buffer
+ *   movw r5, #512
+ * prog:
+ *   ldrh r6, [r4]
+ *   movs r3, #1             @ PG, before every half-word
+ *   str r3, [r2, #0x10]
+ *   strh r6, [r1]
+ *   adds r4, #2
+ *   adds r1, #2
+ *   bl op_wait
+ *   subs r5, #1
+ *   bne prog
+ *   movs r3, #0x80          @ lock behind us, status = done, halt
+ *   str r3, [r2, #0x10]
+ *   movs r3, #2
+ *   str r3, [r0, #8]
+ *   bkpt #0
+ * fail:
+ *   str r7, [r0, #12]       @ FLASH_SR as it stood
+ *   movs r3, #4
+ *   str r3, [r0, #8]
+ *   bkpt #0
+ * op_wait:                  @ wait for one operation to start and finish
+ * start_poll:
+ *   ldr r7, [r2, #0x0c]
+ *   tst r7, #1              @ BSY
+ *   bne busy_poll
+ *   tst r7, #0x20           @ EOP: finished before BSY was ever seen
+ *   bne checked
+ *   b start_poll            @ neither, ever, means the controller ignored us
+ * busy_poll:
+ *   ldr r7, [r2, #0x0c]
+ *   tst r7, #1
+ *   bne busy_poll
+ * checked:
+ *   ldr r3, =0x14           @ WRPRTERR | PGERR
+ *   tst r7, r3
+ *   bne fail
+ *   movs r3, #0x34          @ clear flags for the next operation
+ *   str r3, [r2, #0x0c]
+ *   bx lr
+ *
+ * Every branch target and every PC-relative literal load in the bytes
+ * below was disassembled and checked against this listing.
+ */
+const F103_LOADER = new Uint8Array([
+  0x1c, 0x48, 0x41, 0x68, 0x1c, 0x4a, 0x1d, 0x4b, 0x53, 0x60, 0x1d, 0x4b,
+  0x53, 0x60, 0x34, 0x23, 0xd3, 0x60, 0x02, 0x23, 0x13, 0x61, 0x51, 0x61,
+  0x42, 0x23, 0x13, 0x61, 0x00, 0xf0, 0x18, 0xf8, 0x00, 0x23, 0x13, 0x61,
+  0x17, 0x4c, 0x40, 0xf2, 0x00, 0x25, 0x26, 0x88, 0x01, 0x23, 0x13, 0x61,
+  0x0e, 0x80, 0x02, 0x34, 0x02, 0x31, 0x00, 0xf0, 0x0b, 0xf8, 0x01, 0x3d,
+  0xf5, 0xd1, 0x80, 0x23, 0x13, 0x61, 0x02, 0x23, 0x83, 0x60, 0x00, 0xbe,
+  0xc7, 0x60, 0x04, 0x23, 0x83, 0x60, 0x00, 0xbe, 0xd7, 0x68, 0x17, 0xf0,
+  0x01, 0x0f, 0x03, 0xd1, 0x17, 0xf0, 0x20, 0x0f, 0x04, 0xd1, 0xf7, 0xe7,
+  0xd7, 0x68, 0x17, 0xf0, 0x01, 0x0f, 0xfb, 0xd1, 0x07, 0x4b, 0x1f, 0x42,
+  0xec, 0xd1, 0x34, 0x23, 0xd3, 0x60, 0x70, 0x47, 0x00, 0x04, 0x00, 0x20,
+  0x00, 0x20, 0x02, 0x40, 0x23, 0x01, 0x67, 0x45, 0xab, 0x89, 0xef, 0xcd,
+  0x00, 0x08, 0x00, 0x20, 0x14, 0x00, 0x00, 0x00,
+]);
+
+/** Mailbox words: command and address in, status and FLASH_SR out. */
+const LOADER_DONE = 2;
+const LOADER_REFUSED = 4;
 
 /** The part this site serves over SWD: the F103C8 medium-density (Blue Pill). */
 const DEVICE_ID_F103_MD = 0x410;
 
 const TRANSFER_TIMEOUT = 3000;
 const HALT_TIMEOUT = 2000;
-const READY_TIMEOUT = 15_000; // an F1 page erase takes ~40 ms; this is slack, not expectation
 const CHUNK = 1024;
 
 /**
@@ -570,12 +671,55 @@ export class StlinkConnection {
   /** Stop the core through DHCSR -- stlink's own APIv2 emulation does this. */
   async halt(): Promise<void> {
     await this.write32(DHCSR, DBGKEY | C_HALT | C_DEBUGEN);
-    const deadline = performance.now() + HALT_TIMEOUT;
+    await this.waitHalt(HALT_TIMEOUT, 'the core would not stop');
+  }
+
+  /** Wait for DHCSR to report the stop, for whatever asked for it. */
+  async waitHalt(timeout: number, what: string): Promise<void> {
+    const deadline = performance.now() + timeout;
     while (performance.now() < deadline) {
       if ((await this.read32(DHCSR)) & S_HALT) return;
       await sleep(10);
     }
-    throw new Error('The core would not stop: DHCSR never reported the halt.');
+    throw new Error(`The core never stopped: ${what}.`);
+  }
+
+  /**
+   * Reset and catch the core on the way up: SYSRESETREQ, then the halt
+   * request, so the loader starts from the chip's reset state -- clocks,
+   * peripherals, and a freshly relocked flash controller -- rather than
+   * whatever the old firmware left behind.
+   */
+  async resetHalt(): Promise<void> {
+    await this.write32(AIRCR, SYSRESETREQ);
+    await this.halt();
+  }
+
+  /** A core register, through APIv2's WRITEREG: [cmd, 0x34, index, value, ap]. */
+  async writeReg(index: number, value: number): Promise<void> {
+    await this.command(
+      [
+        CMD_DEBUG,
+        DEBUG_WRITEREG,
+        index,
+        value & 0xff,
+        (value >>> 8) & 0xff,
+        (value >>> 16) & 0xff,
+        (value >>> 24) & 0xff,
+        0,
+        0,
+      ],
+      2,
+      { status: true, retry: true },
+      `writing core register ${index}`,
+    );
+  }
+
+  /** A block of 32-bit writes; the length must already be a word multiple. */
+  async writeBlock(address: number, bytes: Uint8Array): Promise<void> {
+    for (let offset = 0; offset < bytes.length; offset += 4) {
+      await this.write32(address + offset, le32(bytes, offset));
+    }
   }
 
   /** Close what was claimed. Safe to call twice. */
@@ -606,9 +750,13 @@ export function describeDeviceId(deviceId: number): string {
 }
 
 /**
- * Halt, unlock, erase every page the image touches, program, read every
- * byte back, lock, reset. Phases are reported as they are: the erase and
- * the write are slow enough to watch, the rest is a heartbeat.
+ * Reset-halt, load the flash loader and read it back, then one page at a
+ * time: bytes to the page buffer, address to the mailbox, the core runs
+ * the erase and the half-word programming, and the page is read back over
+ * the debug link before the next one starts. A final whole-image read
+ * catches anything a later page disturbed, and then the chip is reset
+ * into what it now holds. Phases are reported as they are: the pages are
+ * slow enough to watch, the rest is a heartbeat.
  */
 export async function flashBluePillSwd(options: StlinkFlashOptions): Promise<StlinkFlashResult> {
   const { probe, data, onProgress } = options;
@@ -624,50 +772,95 @@ export async function flashBluePillSwd(options: StlinkFlashOptions): Promise<Stl
   }
 
   progress(0, 'halt');
-  await probe.halt();
+  await probe.resetHalt();
 
-  await probe.write32(FLASH_KEYR, FLASH_KEY1);
-  await probe.write32(FLASH_KEYR, FLASH_KEY2);
-  await probe.write32(FLASH_SR, SR_CLEAR);
-  const cr = await probe.read32(FLASH_CR);
-  if (cr & CR_LOCK) {
-    throw new Error(
-      `The flash controller will not unlock (FLASH_CR ${hex(cr)}). ` +
-        'If the option bytes hold readout protection, it has to be cleared from the stlink tools first.',
-    );
+  // The loader, read back before it is trusted to run: a byte that did
+  // not land would execute as something else entirely.
+  await probe.writeBlock(LOADER_ADDR, F103_LOADER);
+  const loaderBack = await probe.readBlock(LOADER_ADDR, F103_LOADER.length);
+  for (let i = 0; i < F103_LOADER.length; i++) {
+    if (loaderBack[i] !== F103_LOADER[i]) {
+      throw new Error(
+        `The flash loader did not load: byte ${i} reads back ${hex(loaderBack[i])}, not ${hex(F103_LOADER[i])}.`,
+      );
+    }
   }
 
-  // Erase: one page per 1 KiB of image, RM0008's PER -> AR -> STR.
+  // One page at a time: the bytes go to the page buffer, the address to
+  // the mailbox, the core runs the loader, and every programmed byte is
+  // read back over the debug link before the next page starts.
   const pages = Math.ceil(data.length / PAGE_SIZE);
   for (let page = 0; page < pages; page++) {
     const at = FLASH_BASE + page * PAGE_SIZE;
-    const before = await probe.read32(FLASH_CR);
-    await probe.write32(FLASH_CR, before | CR_PER);
-    await probe.write32(FLASH_AR, at);
-    const armed = await probe.read32(FLASH_CR);
-    await probe.write32(FLASH_CR, armed | CR_STRT);
-    await waitFlashReady(probe, `erasing the page at ${hex(at)}`);
-    const after = await probe.read32(FLASH_CR);
-    await probe.write32(FLASH_CR, after & ~CR_PER);
-    progress(Math.round(((page + 1) / pages) * 100), 'erase');
+    const chunk = new Uint8Array(PAGE_SIZE).fill(0xff);
+    const size = Math.min(PAGE_SIZE, data.length - page * PAGE_SIZE);
+    chunk.set(data.subarray(page * PAGE_SIZE, page * PAGE_SIZE + size));
+
+    await probe.writeBlock(LOADER_PAGEBUF, chunk);
+    const bufferBack = await probe.readBlock(LOADER_PAGEBUF, PAGE_SIZE);
+    for (let i = 0; i < PAGE_SIZE; i++) {
+      if (bufferBack[i] !== chunk[i]) {
+        throw new Error(
+          `The page buffer did not load: byte ${i} reads back ${hex(bufferBack[i])}, not ${hex(chunk[i])}.`,
+        );
+      }
+    }
+
+    await probe.write32(LOADER_MAILBOX, 1); // command: erase and write this page
+    await probe.write32(LOADER_MAILBOX + 4, at);
+    await probe.write32(LOADER_MAILBOX + 8, 0); // status: still working
+    await probe.write32(LOADER_MAILBOX + 12, 0); // error word
+    await probe.writeReg(REG_MSP, LOADER_STACK_TOP);
+    await probe.writeReg(REG_XPSR, 0x01000000); // Thumb state, Thread mode
+    await probe.writeReg(REG_PC, LOADER_ADDR + 1);
+    await probe.write32(DHCSR, DBGKEY | C_DEBUGEN); // clear C_HALT: away it goes
+    try {
+      await probe.waitHalt(LOADER_TIMEOUT, `the loader never finished page ${page}`);
+    } catch (error) {
+      // The loader halts itself with BKPT -- when it is done and when it
+      // refuses. Never halting means it is still polling a controller
+      // that never started, which is the locked case, and FLASH_CR says so.
+      const cr = await probe.read32(FLASH_CR);
+      if (cr & CR_LOCK) {
+        throw new Error(
+          `The flash controller is still locked (FLASH_CR ${hex(cr)}): the unlock keys did not take. ` +
+            'If the option bytes hold readout protection, it has to be cleared from the stlink tools first.',
+        );
+      }
+      throw error;
+    }
+
+    const status = await probe.read32(LOADER_MAILBOX + 8);
+    if (status === LOADER_REFUSED) {
+      const sr = await probe.read32(LOADER_MAILBOX + 12);
+      throw new Error(
+        `Flash refused page ${page} at ${hex(at)}: FLASH_SR ${hex(sr)} ` +
+          `${sr & SR_PGERR ? '(programming error) ' : ''}${sr & SR_WRPRTERR ? '(write protection) ' : ''}` +
+          'the controller answered, and said no.',
+      );
+    }
+    if (status !== LOADER_DONE) {
+      throw new Error(`The loader stopped without an answer at ${hex(at)} (status ${hex(status)}).`);
+    }
+
+    progress(Math.min(99, Math.round(((page + 1) / pages) * 100)), 'write');
+
+    const pageBack = await probe.readBlock(at, size);
+    for (let i = 0; i < size; i++) {
+      if (pageBack[i] !== data[page * PAGE_SIZE + i]) {
+        throw new Error(
+          `Verification failed at ${hex(at + i)}: the file holds ${hex(data[page * PAGE_SIZE + i])}, ` +
+            `the chip holds ${hex(pageBack[i])}. The write did not land cleanly.`,
+        );
+      }
+    }
   }
 
-  // Program: a 32-bit store carries two halfwords; odd tails are padded
-  // with the erased value so the last write is still word-aligned.
-  const padded = new Uint8Array((data.length + 3) & ~3).fill(0xff);
-  padded.set(data);
-  await probe.write32(FLASH_CR, (await probe.read32(FLASH_CR)) | CR_PG);
-  for (let offset = 0; offset < padded.length; offset += 4) {
-    const at = FLASH_BASE + offset;
-    await probe.write32(at, le32(padded, offset));
-    await waitFlashReady(probe, `writing ${hex(at)}`);
-    progress(Math.min(99, Math.floor(((offset + 4) / padded.length) * 100)), 'write');
-  }
-  await probe.write32(FLASH_CR, CR_LOCK);
-
-  // Verify: every byte of the file, read back out of flash.
+  // Every byte of the file, once more from the top: a later page's
+  // programming can still disturb an earlier one, and this is the read
+  // that would see it.
   progress(100, 'verify');
-  const readBack = await probe.readBlock(FLASH_BASE, padded.length);
+  const readBack = await probe.readBlock(FLASH_BASE, (data.length + 3) & ~3);
   for (let i = 0; i < data.length; i++) {
     if (readBack[i] !== data[i]) {
       throw new Error(
@@ -695,33 +888,4 @@ export async function flashBluePillSwd(options: StlinkFlashOptions): Promise<Stl
   }
 
   return { deviceId, verified: true };
-}
-
-/**
- * FLASH_SR's handshake: BSY is the truth (EOP's interrupt coupling on the
- * F1 makes it a bonus rather than a gate). One millisecond first so the
- * operation is latched before the first sample, then the error bits are
- * read off the very sample that showed the controller idle.
- */
-async function waitFlashReady(probe: StlinkConnection, what: string): Promise<void> {
-  await sleep(1);
-  const deadline = performance.now() + READY_TIMEOUT;
-  for (;;) {
-    const sr = await probe.read32(FLASH_SR);
-    if (!(sr & SR_BSY)) {
-      await probe.write32(FLASH_SR, SR_CLEAR);
-      if (sr & (SR_PGERR | SR_WRPRTERR)) {
-        throw new Error(
-          `Flash refused to ${what}: FLASH_SR ${hex(sr)} ` +
-            `${sr & SR_PGERR ? '(programming error) ' : ''}` +
-            `${sr & SR_WRPRTERR ? '(write protection)' : ''}`.trim(),
-        );
-      }
-      return;
-    }
-    if (performance.now() > deadline) {
-      throw new Error(`Timed out while ${what}: FLASH_SR stuck at ${hex(sr)}.`);
-    }
-    await sleep(1);
-  }
 }

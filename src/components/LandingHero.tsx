@@ -1176,9 +1176,9 @@ export default function LandingHero() {
     } catch (error) {
       console.error('Flashing failed:', error);
       setStatus(
-        `${t('status.flashingFailed', 'Flashing failed')}: ${
+        `${t('status.flashingFailed', 'Flashing failed')}: ${(
           error instanceof Error ? error.message : String(error)
-        }. Please try again.`,
+        ).replace(/\.$/, '')}. Please try again.`,
       );
     } finally {
       setIsFlashing(false);

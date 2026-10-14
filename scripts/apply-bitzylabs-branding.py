@@ -2423,7 +2423,9 @@ def patch_devboard_flows() -> None:
 
     # Upstream asks for a translation key that exists in no locale: the
     # flash-failure line renders as the raw "status.flashingFailed" string.
-    # A default value in the call fixes every language at once.
+    # A default value in the call fixes every language at once, and the
+    # message's own trailing period is trimmed so the sentence upstream
+    # appends does not arrive with two of them.
     changed |= inject_once(
         path,
         "t('status.flashingFailed', 'Flashing failed')",
@@ -2433,6 +2435,16 @@ def patch_devboard_flows() -> None:
         "        `${t('status.flashingFailed', 'Flashing failed')}: ${\n"
         "          error instanceof Error ? error.message : String(error)\n"
         "        }. Please try again.`,",
+    )
+    changed |= inject_once(
+        path,
+        "replace(/\\.$/, '')",
+        "        `${t('status.flashingFailed', 'Flashing failed')}: ${\n"
+        "          error instanceof Error ? error.message : String(error)\n"
+        "        }. Please try again.`,",
+        "        `${t('status.flashingFailed', 'Flashing failed')}: ${(\n"
+        "          error instanceof Error ? error.message : String(error)\n"
+        "        ).replace(/\\.$/, '')}. Please try again.`,",
     )
     note(changed, "LandingHero.tsx: Continue To Flash, STM32 path (ST-Link over WebUSB), instructions")
 
