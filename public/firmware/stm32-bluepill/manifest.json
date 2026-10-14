@@ -1,0 +1,11 @@
+{
+  "name": "STM32 Blue Pill SmoothBlinky",
+  "repository": "BitzyLabs/STM32_BluePill_Blinky",
+  "versions": [
+    "STM 32 Smooth Blinkey v1.00"
+  ],
+  "devices": [
+    "STM32F103C8-BluePill"
+  ],
+  "lastUpdated": "2026-10-14T05:34:31.000Z"
+}

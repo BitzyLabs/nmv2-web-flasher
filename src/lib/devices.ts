@@ -16,7 +16,7 @@ export type Firmware = {
 };
 export type Board = { name: string; file: string; supported_firmware: Firmware[] };
 
-export type DeviceCategory = 'miners' | 'tools';
+export type DeviceCategory = 'miners' | 'tools' | 'devboards';
 
 /**
  * What a device says for itself. Swapping the background was never enough:
@@ -72,9 +72,19 @@ export type DeviceSource = {
    * more boards than anyone can scan, and pointless where it has two.
    */
   detectChip?: boolean;
+  /**
+   * Which silicon the device's flasher talks to. Absent means the esptool
+   * path every miner and tool takes; 'stm32' takes the ROM bootloader path.
+   */
+  mcu?: 'esp32' | 'stm32';
 };
 
 export const CATEGORIES: { id: DeviceCategory; title: string; blurb: string }[] = [
+  {
+    id: 'devboards',
+    title: 'DevBoard Tests',
+    blurb: 'Blinky builds for the boards on our own bench.',
+  },
   {
     id: 'miners',
     title: 'Miners',
@@ -92,6 +102,22 @@ const SHOP = 'https://www.bitzylabs.com';
 export const NERDMINER_ORIGINAL = 'NerdMinerV2 original board (T-Display-S3)';
 
 export const DEVICE_SOURCES: DeviceSource[] = [
+  // DevBoard Tests come first: these are the boards this fork bench-tests
+  // firmware on, and the picker should offer them before the miners.
+  {
+    device: 'ESP 32 N16R8',
+    category: 'devboards',
+    mcu: 'esp32',
+    tagline: 'ESP32-S3 bench test',
+    slug: 'esp32s3-smoothblinky',
+  },
+  {
+    device: 'STM 32 BluePill',
+    category: 'devboards',
+    mcu: 'stm32',
+    tagline: 'STM32F103 bench test',
+    slug: 'stm32-bluepill',
+  },
   {
     device: 'NerdMiner',
     category: 'miners',

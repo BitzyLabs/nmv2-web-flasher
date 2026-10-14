@@ -1,0 +1,9 @@
+{
+  "version": "STM 32 Smooth Blinkey v1.00",
+  "boards": [
+    "STM32F103C8-BluePill"
+  ],
+  "sha256": {
+    "STM32F103C8-BluePill": "05ae8403bed38d49cadde4717008c8e67edcadec84df774f2af7b602a59a3d3e"
+  }
+}

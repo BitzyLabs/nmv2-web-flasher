@@ -1,0 +1,9 @@
+{
+  "version": "ESP 32 SmoothBlinkey v1.00",
+  "boards": [
+    "ESP32S3-N16R8"
+  ],
+  "sha256": {
+    "ESP32S3-N16R8": "8ee58d53a1ebe73aa8fdbfceaf10575942dea8bbbae8497140b8c5c414ff1991"
+  }
+}

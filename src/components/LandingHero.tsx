@@ -26,6 +26,9 @@ import { Chip, chipFromEsptool } from '@/lib/boards';
 import BoardPicker from './BoardPicker';
 import BoardArt from './BoardArt';
 import DeviceIntro from './DeviceIntro';
+import DevBoardPanel from './bitzy/DevBoardPanel';
+import { isDevBoard, isStm32 } from '@/lib/bitzy/devboards';
+import { flashBluePill } from '@/lib/bitzy/stm32flash';
 
 import { Terminal } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
@@ -243,9 +246,13 @@ export default function LandingHero() {
   // flow: the device has just rebooted into something and you are on your own.
   const nextStep = !finished
     ? null
-    : heroSource?.category === 'tools'
-      ? 'Unplug it and plug it back in. To check the chip really holds this build, run the verify command from the project README.'
-      : 'Unplug it and plug it back in. It will come up as its own WiFi access point: join that to set your pool and wallet.';
+    : heroSource?.category === 'devboards'
+      ? heroSource?.mcu === 'stm32'
+        ? 'Flash complete. Set the BOOT0 jumper back to 0, press Reset, and the LED should blink.'
+        : 'Flash complete. Unplug the board and plug it back in -- the LED should blink.'
+      : heroSource?.category === 'tools'
+        ? 'Unplug it and plug it back in. To check the chip really holds this build, run the verify command from the project README.'
+        : 'Unplug it and plug it back in. It will come up as its own WiFi access point: join that to set your pool and wallet.';
   const board =
     selectedBoardVersion !== ''
       ? device.boards.find((b) => b.name == selectedBoardVersion)!
@@ -403,11 +410,13 @@ export default function LandingHero() {
 
     try {
       const port = await navigator.serial.requestPort();
+      // The STM32 ROM bootloader runs 8 data bits, even parity, 1 stop bit
+      // (AN2606); everything else on this site is a plain 8-N-1 link.
       await port.open({
         baudRate: 115200,
         dataBits: 8,
         stopBits: 1,
-        parity: 'none',
+        parity: isStm32(selectedDevice) ? 'even' : 'none',
         flowControl: 'none',
       });
 
@@ -893,6 +902,55 @@ export default function LandingHero() {
     );
   };
 
+  // DevBoard Tests: one board and one firmware each, so the middle step is
+  // a single button rather than a picker. Pressing it picks both and leaves
+  // nothing between the user and the Connect button.
+  const continueToFlash = () => {
+    const boards = device.boards as Board[];
+    const only = boards[0];
+    if (!only) return;
+    setSelectedBoardVersion(only.name);
+    setSelectedFirmware(only.supported_firmware[0]?.version ?? '');
+  };
+
+  // The Blue Pill flashes through its ROM bootloader -- AN3155 over the same
+  // open serial port -- not through esptool. The file was hash-checked when
+  // the version was picked, so the bytes are reused when they are still to
+  // hand and fetched fresh otherwise.
+  const flashBluePillFlow = async () => {
+    const path = imageFor(firmware.path, false);
+    if (!path) throw new Error('No firmware is available for this device.');
+
+    const cached = checkedBytesRef.current;
+    let bytes: ArrayBuffer;
+
+    if (cached && cached.path === path) {
+      bytes = cached.bytes;
+    } else {
+      const response = await fetch(path);
+      if (!response.ok) throw new Error('Failed to load the firmware file.');
+      bytes = await response.arrayBuffer();
+    }
+
+    await flashBluePill({
+      port: serialPortRef.current,
+      data: new Uint8Array(bytes),
+      onProgress: (percent, phase) => {
+        if (phase === 'write') {
+          setProgress(percent);
+          setStatus(t('status.flashing', { percent }));
+        } else if (phase === 'verify') {
+          setProgress(100);
+          setStatus('Verifying what was written...');
+        } else if (phase === 'erase') {
+          setStatus('Erasing flash...');
+        } else {
+          setStatus('Talking to the bootloader...');
+        }
+      },
+    });
+  };
+
   const handleStartFlashing = async () => {
     if (!serialPortRef.current) {
       setStatus(t('status.connectFirst'));
@@ -921,6 +979,19 @@ export default function LandingHero() {
       // Stop logging if it's active
       if (isLogging) {
         await stopSerialLogging();
+      }
+
+      // DevBoard Tests: the Blue Pill talks to its ROM bootloader over the
+      // port that is already open, so it never touches esptool or the ESP
+      // reset dance below. What the bootloader did -- including reading every
+      // byte back -- is said in the status line rather than assumed.
+      if (isStm32(selectedDevice)) {
+        await flashBluePillFlow();
+        setStatus(
+          'Flash complete and verified. Set the BOOT0 jumper back to 0, press Reset, ' +
+            'and the LED should blink.',
+        );
+        return;
       }
 
       // Close the current connection
@@ -1174,12 +1245,21 @@ export default function LandingHero() {
                     }
                   />
                 )}
+                {isDevBoard(selectedDevice) ? (
+                  <Button
+                    onClick={continueToFlash}
+                    disabled={isConnecting || isFlashing || selectedDevice === ''}
+                  >
+                    Continue To Flash
+                  </Button>
+                ) : (
                 <Button
                   onClick={() => setIsBoardPickerOpen(true)}
                   disabled={isConnecting || isFlashing || selectedDevice === ''}
                 >
                   {selectedBoardVersion === '' ? t('hero.selectBoard') : selectedBoardVersion}
                 </Button>
+                )}
               </div>
               <div className="flex flex-col justify-center w-52">
                 <GitCompareIcon
@@ -1189,6 +1269,7 @@ export default function LandingHero() {
                 />
                 <Selector
                   placeholder={t('hero.selectFirmware')}
+                  value={selectedFirmware}
                   values={board.supported_firmware.map((f: any) => f.version)}
                   onValueChange={setSelectedFirmware}
                   disabled={isConnecting || isFlashing || selectedBoardVersion === ''}
@@ -1321,6 +1402,7 @@ export default function LandingHero() {
               </div>
             )}
 
+            <DevBoardPanel device={selectedDevice} download={firmware.path} />
             <div className="w-full max-w-sm space-y-4">
               <Button
                 className="w-full"

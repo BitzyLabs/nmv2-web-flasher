@@ -1,6 +1,16 @@
 {
   "devices": [
     {
+      "name": "ESP 32 N16R8",
+      "picture": "pictures/esp32-n16r8.png",
+      "boards": []
+    },
+    {
+      "name": "STM 32 BluePill",
+      "picture": "pictures/stm32-bluepill.png",
+      "boards": []
+    },
+    {
       "name": "NerdMiner",
       "picture": "pictures/nerdminer.png",
       "boards": []

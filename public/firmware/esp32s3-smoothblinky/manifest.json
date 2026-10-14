@@ -1,0 +1,11 @@
+{
+  "name": "ESP32-S3 N16R8 SmoothBlinky",
+  "repository": "BitzyLabs/ESP32S3_N16R8_SmoothBlinky",
+  "versions": [
+    "ESP 32 SmoothBlinkey v1.00"
+  ],
+  "devices": [
+    "ESP32S3-N16R8"
+  ],
+  "lastUpdated": "2026-10-14T05:34:31.000Z"
+}
