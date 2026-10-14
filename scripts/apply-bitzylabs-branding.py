@@ -123,6 +123,25 @@ def replace_once(path: Path, old: str, new: str, *, required: bool = True) -> bo
     return True
 
 
+def inject_once(path: Path, marker: str, old: str, new: str) -> bool:
+    """Apply an injection unless its own output is already in the file.
+
+    replace_once recognises an applied patch by finding the whole
+    replacement verbatim (or the anchor inside it, for wrappers). Neither
+    holds when upstream also edited *around* the anchor: a device row added
+    between our rows and the original neighbour means the replacement no
+    longer appears anywhere, while the anchor is gone because we consumed
+    it -- a correct merged state that would read as a missing anchor. The
+    marker is a line only this patch writes, so its presence settles the
+    question either way. Absent marker plus absent anchor still fails
+    loudly through replace_once: then the work is genuinely not done and
+    the file has moved out from under us.
+    """
+    if marker in path.read_text():
+        return False
+    return replace_once(path, old, new)
+
+
 def replace_if_present(path: Path, old: str, new: str) -> bool:
     """Replace `old` with `new`, but stay quiet when `old` is simply gone.
 
@@ -442,14 +461,16 @@ def patch_devboards() -> None:
     devices_ts = ROOT / "src" / "lib" / "devices.ts"
     changed_devices = False
 
-    changed_devices |= replace_once(
+    changed_devices |= inject_once(
         devices_ts,
+        "| 'devboards';",
         "export type DeviceCategory = 'miners' | 'tools';",
         "export type DeviceCategory = 'miners' | 'tools' | 'devboards';",
     )
 
-    changed_devices |= replace_once(
+    changed_devices |= inject_once(
         devices_ts,
+        "mcu?: 'esp32' | 'stm32';",
         "  detectChip?: boolean;\n};",
         "  detectChip?: boolean;\n"
         "  /**\n"
@@ -462,8 +483,9 @@ def patch_devboards() -> None:
 
     # First in the array, because the picker renders these sections in order
     # and DevBoard Tests belongs before the miners.
-    changed_devices |= replace_once(
+    changed_devices |= inject_once(
         devices_ts,
+        "id: 'devboards',",
         "export const CATEGORIES: { id: DeviceCategory; title: string; blurb: string }[] = [\n"
         "  {\n"
         "    id: 'miners',",
@@ -477,8 +499,9 @@ def patch_devboards() -> None:
         "    id: 'miners',",
     )
 
-    changed_devices |= replace_once(
+    changed_devices |= inject_once(
         devices_ts,
+        "device: 'ESP 32 N16R8',",
         "export const DEVICE_SOURCES: DeviceSource[] = [\n"
         "  {\n"
         "    device: 'NerdMiner',",
@@ -507,8 +530,9 @@ def patch_devboards() -> None:
     # The picker builds its tiles from this table; a device missing here is a
     # device nobody can reach, no matter what devices.ts says.
     picker = ROOT / "src" / "components" / "firmware_data.json"
-    changed_picker = replace_once(
+    changed_picker = inject_once(
         picker,
+        '"name": "ESP 32 N16R8",',
         '  "devices": [\n'
         "    {\n"
         '      "name": "NerdMiner",',
@@ -534,16 +558,19 @@ def patch_devboards() -> None:
 def patch_devboard_flows() -> None:
     """LandingHero: the Continue button, the STM32 path, the instructions.
 
-    Seven anchors in one file, split out so a failure names the step rather
-    than the file. Every one is exact text; the wrapping ones re-indent the
-    original inside an `else`, which replace_once recognises as already
-    applied on a second run.
+    Eight anchors in one file, split out so a failure names the step rather
+    than the file. Every one is exact text and every call carries a marker
+    this patch alone writes: a second run -- or a merge that stacked
+    upstream's edits around ours -- sees the work as done instead of
+    demanding anchors the file no longer has. The wrapping ones still keep
+    the original inside an `else`, so the verbatim check agrees.
     """
     path = ROOT / "src" / "components" / "LandingHero.tsx"
     changed = False
 
-    changed |= replace_once(
+    changed |= inject_once(
         path,
+        "import DevBoardPanel from './bitzy/DevBoardPanel';",
         "import BoardArt from './BoardArt';\nimport DeviceIntro from './DeviceIntro';",
         "import BoardArt from './BoardArt';\n"
         "import DeviceIntro from './DeviceIntro';\n"
@@ -552,8 +579,9 @@ def patch_devboard_flows() -> None:
         "import { flashBluePill } from '@/lib/bitzy/stm32flash';",
     )
 
-    changed |= replace_once(
+    changed |= inject_once(
         path,
+        "const continueToFlash = () => {",
         "  const handleStartFlashing = async () => {",
         "  // DevBoard Tests: one board and one firmware each, so the middle step is\n"
         "  // a single button rather than a picker. Pressing it picks both and leaves\n"
@@ -609,8 +637,9 @@ def patch_devboard_flows() -> None:
 
     # The Blue Pill needs even parity (AN2606); nothing else on this site
     # does, so only its connect opens the port that way.
-    changed |= replace_once(
+    changed |= inject_once(
         path,
+        "parity: isStm32(selectedDevice) ? 'even' : 'none',",
         "      const port = await navigator.serial.requestPort();\n"
         "      await port.open({\n"
         "        baudRate: 115200,\n"
@@ -631,8 +660,9 @@ def patch_devboard_flows() -> None:
         "      });",
     )
 
-    changed |= replace_once(
+    changed |= inject_once(
         path,
+        "await flashBluePillFlow();",
         "    try {\n"
         "      // Stop logging if it's active\n"
         "      if (isLogging) {\n"
@@ -660,8 +690,9 @@ def patch_devboard_flows() -> None:
 
     # Wrapping patch: the original Button survives inside the else branch,
     # which is how replace_once knows it already ran.
-    changed |= replace_once(
+    changed |= inject_once(
         path,
+        "onClick={continueToFlash}",
         "                <Button\n"
         "                  onClick={() => setIsBoardPickerOpen(true)}\n"
         "                  disabled={isConnecting || isFlashing || selectedDevice === ''}\n"
@@ -687,8 +718,9 @@ def patch_devboard_flows() -> None:
 
     # The dropdown is otherwise uncontrolled, so Continue To Flash would set
     # the firmware without the menu showing it.
-    changed |= replace_once(
+    changed |= inject_once(
         path,
+        "value={selectedFirmware}",
         "                <Selector\n"
         "                  placeholder={t('hero.selectFirmware')}\n"
         "                  values={board.supported_firmware.map((f: any) => f.version)}\n"
@@ -701,8 +733,9 @@ def patch_devboard_flows() -> None:
     )
 
     # Prep steps above the Connect button, plus the manual route underneath.
-    changed |= replace_once(
+    changed |= inject_once(
         path,
+        "<DevBoardPanel device={selectedDevice}",
         '            <div className="w-full max-w-sm space-y-4">',
         '            <DevBoardPanel device={selectedDevice} download={firmware.path} />\n'
         '            <div className="w-full max-w-sm space-y-4">',
@@ -710,8 +743,9 @@ def patch_devboard_flows() -> None:
 
     # The miners' next step (join its WiFi AP) is a lie for a board whose
     # whole job is blinking an LED.
-    changed |= replace_once(
+    changed |= inject_once(
         path,
+        "=== 'devboards'",
         "  const nextStep = !finished\n"
         "    ? null\n"
         "    : heroSource?.category === 'tools'\n"
