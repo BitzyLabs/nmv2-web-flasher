@@ -44,14 +44,17 @@ const basePath = '';
 const imageFor = (factoryPath: string, keeping: boolean) =>
   keeping ? factoryPath.replace(/_factory\.bin$/, '_firmware.bin') : factoryPath;
 
-// The Bitzy Labs signature: a white headline with exactly one word in gold.
+// The Bitzy Labs signature: the sentence opens and lands in dot matrix,
+// and the middle -- the part that just explains -- stays in the page face.
 function Headline({ text }: { text: string }) {
   const words = text.trim().split(' ');
   const accent = words.pop();
+  const lead = words.shift();
 
   return (
     <>
-      {words.join(' ')} <span className="text-bitzy">{accent}</span>
+      <span className="font-doto">{lead}</span> {words.join(' ')}{' '}
+      <span className="text-bitzy font-doto">{accent}</span>
     </>
   );
 }
@@ -1173,7 +1176,7 @@ export default function LandingHero() {
     } catch (error) {
       console.error('Flashing failed:', error);
       setStatus(
-        `${t('status.flashingFailed')}: ${
+        `${t('status.flashingFailed', 'Flashing failed')}: ${
           error instanceof Error ? error.message : String(error)
         }. Please try again.`,
       );
@@ -1236,7 +1239,7 @@ export default function LandingHero() {
                 <p className="brand-kicker">
                   {heroSource?.intro?.kicker ?? heroSource?.tagline ?? selectedDevice}
                 </p>
-                <h1 className="font-display text-3xl font-bold tracking-tight text-[var(--color-ink)] sm:text-4xl">
+                <h1 className="font-doto text-3xl font-bold tracking-tight text-[var(--color-ink)] sm:text-4xl">
                   {selectedDevice}
                 </h1>
               </div>
@@ -1257,7 +1260,11 @@ export default function LandingHero() {
                   />
                 )}
                 <Button onClick={openModal} disabled={isConnecting || isFlashing}>
-                  {selectedDevice === '' ? t('hero.selectDevice') : selectedDevice}
+                  {selectedDevice === '' ? (
+                    t('hero.selectDevice')
+                  ) : (
+                    <span className="font-doto">{selectedDevice}</span>
+                  )}
                 </Button>
               </div>
               <div className="flex flex-col justify-center w-52">
@@ -1294,7 +1301,11 @@ export default function LandingHero() {
                   onClick={() => setIsBoardPickerOpen(true)}
                   disabled={isConnecting || isFlashing || selectedDevice === ''}
                 >
-                  {selectedBoardVersion === '' ? t('hero.selectBoard') : selectedBoardVersion}
+                  {selectedBoardVersion === '' ? (
+                    t('hero.selectBoard')
+                  ) : (
+                    <span className="font-doto">{selectedBoardVersion}</span>
+                  )}
                 </Button>
                 )}
               </div>

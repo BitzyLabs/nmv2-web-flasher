@@ -63,6 +63,19 @@
 }
 
 
+/* Doto -- dot matrix, for the words that name things: the two display
+   words of the headline and the device or board currently selected.
+   Served from this repository like every face above; the wght axis
+   travels in the file and the ROND one sits at its default. */
+@font-face {
+  font-family: 'Doto';
+  src: url('/fonts/Doto.woff2') format('woff2-variations'),
+       url('/fonts/Doto.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 @plugin 'tailwindcss-animate';
 
 /* Custom scrollbar styles for select components */
@@ -451,6 +464,12 @@ body {
   font-feature-settings: 'tnum' 1;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
+}
+
+/* The name of the selected thing, and the two headline words that carry
+   the sentence, in dot matrix. */
+.font-doto {
+  font-family: 'Doto', ui-monospace, monospace;
 }
 
 /* Small mono kicker with a dash, the house signature */

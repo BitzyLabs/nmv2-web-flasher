@@ -87,7 +87,11 @@ const DHCSR = 0xe000edf0;
 const DBGKEY = 0xa05f0000;
 const C_HALT = 0x00000002;
 const C_DEBUGEN = 0x00000001;
-const S_HALT = 0x20000000;
+// S_HALT is bit 17 -- the status half of DHCSR, which reports the core has
+// actually stopped. The C_ bits above are requests: they read back as
+// written the moment the write lands, long before the core obeys, so
+// polling one of those would declare victory over a still-running chip.
+const S_HALT = 0x00020000;
 const AIRCR = 0xe000ed0c;
 const SYSRESETREQ = 0x05fa0004;
 const DBGMCU_IDCODE = 0xe0042000;

@@ -366,6 +366,19 @@ def patch_assets() -> None:
         if changed:
             shutil.copyfile(source, target)
         note(changed, f"assets: {name} -> {target.relative_to(ROOT)}")
+    # The dot-matrix display face the branding added: served the same way as
+    # every other typeface here, a file in the repository rather than a third
+    # party in the page load. globals.css points at it by name, so a missing
+    # copy would ship a font stack silently falling through to the next face.
+    font_target = ROOT / "public" / "fonts" / "Doto.woff2"
+    source = ASSETS / "Doto.woff2"
+    if not source.is_file() or source.stat().st_size == 0:
+        raise PatchError("missing font asset: .bitzylabs-overlay/assets/Doto.woff2")
+    changed = not font_target.is_file() or font_target.read_bytes() != source.read_bytes()
+    if changed:
+        font_target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, font_target)
+    note(changed, "assets: Doto.woff2 -> public/fonts/")
     # The upstream wordmarks are not ours and are no longer referenced; the
     # dark tile went the band's way -- the light one now tiles that too --
     # and its copy would ship as an orphaned 40k file if left behind.
@@ -1229,6 +1242,43 @@ def patch_palette() -> None:
         "/* The Bitzy Labs + FLASHER lockup */",
     )
     note(changed, f"globals.css: palette -> the store's anchors (crimson {CRIMSON}, ink {STORE_INK}, warm ground {STORE_BG})")
+
+    # The dot-matrix face: its @font-face above the plugin line, in the same
+    # shape as the three faces upstream serves, and the class that names it
+    # beside the other two font classes. Both anchors are text only this
+    # patch writes, and both live in regions the palette pass never touches.
+    changed |= inject_once(
+        path,
+        "font-family: 'Doto'",
+        "@plugin 'tailwindcss-animate';",
+        "/* Doto -- dot matrix, for the words that name things: the two display\n"
+        "   words of the headline and the device or board currently selected.\n"
+        "   Served from this repository like every face above; the wght axis\n"
+        "   travels in the file and the ROND one sits at its default. */\n"
+        "@font-face {\n"
+        "  font-family: 'Doto';\n"
+        "  src: url('/fonts/Doto.woff2') format('woff2-variations'),\n"
+        "       url('/fonts/Doto.woff2') format('woff2');\n"
+        "  font-weight: 100 900;\n"
+        "  font-style: normal;\n"
+        "  font-display: swap;\n"
+        "}\n"
+        "\n"
+        "@plugin 'tailwindcss-animate';",
+    )
+    changed |= inject_once(
+        path,
+        ".font-doto {",
+        "/* Small mono kicker with a dash, the house signature */",
+        "/* The name of the selected thing, and the two headline words that carry\n"
+        "   the sentence, in dot matrix. */\n"
+        ".font-doto {\n"
+        "  font-family: 'Doto', ui-monospace, monospace;\n"
+        "}\n"
+        "\n"
+        "/* Small mono kicker with a dash, the house signature */",
+    )
+    note(changed, "globals.css: Doto face served from the repo, .font-doto class")
 
 
 # The flasher's band, kept as its own constant: patch_chrome trades an
@@ -2371,6 +2421,19 @@ def patch_devboard_flows() -> None:
         "      }",
     )
 
+    # Upstream asks for a translation key that exists in no locale: the
+    # flash-failure line renders as the raw "status.flashingFailed" string.
+    # A default value in the call fixes every language at once.
+    changed |= inject_once(
+        path,
+        "t('status.flashingFailed', 'Flashing failed')",
+        "        `${t('status.flashingFailed')}: ${\n"
+        "          error instanceof Error ? error.message : String(error)\n"
+        "        }. Please try again.`,",
+        "        `${t('status.flashingFailed', 'Flashing failed')}: ${\n"
+        "          error instanceof Error ? error.message : String(error)\n"
+        "        }. Please try again.`,",
+    )
     note(changed, "LandingHero.tsx: Continue To Flash, STM32 path (ST-Link over WebUSB), instructions")
 
 
@@ -2794,6 +2857,73 @@ def patch_hero_light() -> None:
         '<p className="mt-2.5 text-xs leading-relaxed text-white/50">',
         f'<p className="mt-2.5 text-xs leading-relaxed {muted}">',
     )
+    # Dot matrix on the words that name things. The headline splits as it
+    # always did -- lead word, middle, accent -- but the lead and the accent
+    # (the verb the sentence opens with and the crimson word it lands on)
+    # now wear the face, and the device or board name does too, wherever the
+    # page says what is selected: the big name, and the two step buttons
+    # that show a name once there is one to show.
+    changed |= inject_once(
+        path,
+        "in dot matrix",
+        "// The Bitzy Labs signature: a white headline with exactly one word in gold.\n"
+        "function Headline({ text }: { text: string }) {\n"
+        "  const words = text.trim().split(' ');\n"
+        "  const accent = words.pop();\n"
+        "\n"
+        "  return (\n"
+        "    <>\n"
+        "      {words.join(' ')} <span className=\"text-bitzy\">{accent}</span>\n"
+        "    </>\n"
+        "  );\n"
+        "}",
+        "// The Bitzy Labs signature: the sentence opens and lands in dot matrix,\n"
+        "// and the middle -- the part that just explains -- stays in the page face.\n"
+        "function Headline({ text }: { text: string }) {\n"
+        "  const words = text.trim().split(' ');\n"
+        "  const accent = words.pop();\n"
+        "  const lead = words.shift();\n"
+        "\n"
+        "  return (\n"
+        "    <>\n"
+        "      <span className=\"font-doto\">{lead}</span> {words.join(' ')}{' '}\n"
+        "      <span className=\"text-bitzy font-doto\">{accent}</span>\n"
+        "    </>\n"
+        "  );\n"
+        "}",
+    )
+    changed |= inject_once(
+        path,
+        "font-doto text-3xl font-bold",
+        "                <h1 className=\"font-display text-3xl font-bold tracking-tight "
+        "text-[var(--color-ink)] sm:text-4xl\">\n"
+        "                  {selectedDevice}\n"
+        "                </h1>",
+        "                <h1 className=\"font-doto text-3xl font-bold tracking-tight "
+        "text-[var(--color-ink)] sm:text-4xl\">\n"
+        "                  {selectedDevice}\n"
+        "                </h1>",
+    )
+    changed |= inject_once(
+        path,
+        "<span className=\"font-doto\">{selectedDevice}</span>",
+        "                  {selectedDevice === '' ? t('hero.selectDevice') : selectedDevice}",
+        "                  {selectedDevice === '' ? (\n"
+        "                    t('hero.selectDevice')\n"
+        "                  ) : (\n"
+        "                    <span className=\"font-doto\">{selectedDevice}</span>\n"
+        "                  )}",
+    )
+    changed |= inject_once(
+        path,
+        "<span className=\"font-doto\">{selectedBoardVersion}</span>",
+        "                  {selectedBoardVersion === '' ? t('hero.selectBoard') : selectedBoardVersion}",
+        "                  {selectedBoardVersion === '' ? (\n"
+        "                    t('hero.selectBoard')\n"
+        "                  ) : (\n"
+        "                    <span className=\"font-doto\">{selectedBoardVersion}</span>\n"
+        "                  )}",
+    )
     note(changed, "LandingHero.tsx: the flasher band reads light -- ink, muted, white card")
 
 
@@ -3002,6 +3132,14 @@ def validate() -> None:
             problems.append(f".bitzylabs-overlay/assets/{name} missing or empty")
         elif not copy.is_file() or copy.read_bytes() != original.read_bytes():
             problems.append(f"{copy.relative_to(ROOT)} missing or differs from the overlay")
+    # The dot-matrix face ships the same way: overlay asset, byte-identical
+    # copy in the tree that builds.
+    doto = ASSETS / "Doto.woff2"
+    doto_copy = ROOT / "public" / "fonts" / "Doto.woff2"
+    if not doto.is_file() or doto.stat().st_size == 0:
+        problems.append(".bitzylabs-overlay/assets/Doto.woff2 missing or empty")
+    elif not doto_copy.is_file() or doto_copy.read_bytes() != doto.read_bytes():
+        problems.append("public/fonts/Doto.woff2 missing or differs from the overlay")
     if (ASSETS / "logo-tile-dark.svg").exists() or (
         ROOT / "public" / "pictures" / "logo-tile-dark.svg"
     ).exists():
@@ -3078,6 +3216,8 @@ def validate() -> None:
         ("@keyframes bitzy-glow", "the hero's drifting glow"),
         ("box-shadow: 0 10px 26px rgba(220, 20, 60, 0.32)", "the store's button glow"),
         ("@media (prefers-reduced-motion: reduce)", "the reduce-motion stop"),
+        ("font-family: 'Doto'", "the dot-matrix face, served from the repo"),
+        (".font-doto {", "the class that puts it on a word"),
     ):
         if needle not in css:
             problems.append(f"globals.css: {needle!r} missing ({what})")
@@ -3472,6 +3612,10 @@ def validate() -> None:
         "Serial logging is not available on this board",
         "flashBluePillSwdFlow",
         "handleConnectStlink",
+        # The failure line names itself even when no locale carries the key,
+        # and the words that name things wear the dot-matrix face.
+        "t('status.flashingFailed', 'Flashing failed')",
+        "<span className=\"font-doto\">{selectedDevice}</span>",
     ):
         if needle not in hero:
             problems.append(f"LandingHero.tsx: {needle!r} missing (DevBoard flow)")
