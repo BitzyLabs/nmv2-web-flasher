@@ -1,16 +1,18 @@
 /**
- * ST-Link over WebUSB -- the "STM 32 Blue Pill" path that needs no BOOT0
- * jumper and no crossed wires.
+ * ST-Link over WebUSB -- the "STM 32 Blue Pill" path, and the only one
+ * this site has: the kit ships an ST-Link V2, so the board is reached
+ * through its debug port. No BOOT0 jumper, no serial adapter, no crossed
+ * wires, and no Web Serial picker anywhere in the flow.
  *
- * The serial path in stm32flash.ts talks to the chip's ROM bootloader, so
- * the board has to be moved into it first. The other way onto the same
- * flash is the debug port: an ST-Link dongle speaks SWD, and WebUSB lets
- * the page open the dongle itself and send the same packets st-flash
- * sends from the shell. Every opcode and packet layout below is taken
- * from the stlink-org/stlink sources (BSD-3-Clause): inc/stlink_cmd.h for
- * the commands, src/stlink-lib/usb.c for the transfers -- a 16-byte
- * command out, a fixed reply in, and two memory operations that reach
- * every register on the chip.
+ * WebUSB lets the page open the dongle itself and send the same packets
+ * st-flash sends from the shell. Every opcode and packet layout below is
+ * taken from the stlink-org/stlink sources (BSD-3-Clause):
+ * inc/stlink_cmd.h for the commands, src/stlink-lib/usb.c for the
+ * transfers -- a 16-byte command out, a fixed reply in, and two memory
+ * operations that reach every register on the chip. The connect sequence
+ * mirrors what stlink's own open does, and matches the one inspected in
+ * Hypothesis-Magic/stm32-web-flasher -- the donor this fork's STM32 path
+ * was rebuilt from when the reader pointed at it.
  *
  * That is the whole trick: the ST-Link firmware does the SWD protocol, so
  * stopping the core, unlocking the flash controller, erasing pages and
@@ -41,6 +43,8 @@ const CMD_SIZE = 16;
 /** ST-Link command bytes -- inc/stlink_cmd.h (stlink-org/stlink). */
 const CMD_GET_VERSION = 0xf1;
 const CMD_DEBUG = 0xf2;
+const CMD_DFU = 0xf3;
+const CMD_GET_CURRENT_MODE = 0xf5;
 const DEBUG_ENTER_V1 = 0x20;
 const DEBUG_ENTER_V2 = 0x30;
 const DEBUG_ENTER_SWD = 0xa3;
@@ -50,6 +54,19 @@ const DEBUG_READMEM32 = 0x07;
 const DEBUG_WRITEMEM32 = 0x08;
 const DEBUG_RWSTATUS = 0x3b;
 const DEBUG_RWSTATUS2 = 0x3e;
+const DEBUG_EXIT = 0x21;
+const DEBUG_SET_SWCLK_FREQ = 0x43;
+const DFU_EXIT = 0x07;
+
+/** What GET_CURRENT_MODE answers first: the mode the probe was left in. */
+const MODE_DFU = 0;
+const MODE_DEBUG = 2;
+
+/**
+ * STLINK_SWDCLK_950KHZ_DIVISOR, the divisor stlink sends when it wants a
+ * bench clock that long jumper wires survive: 950 kHz.
+ */
+const SWCLK_DIVISOR_950KHZ = 3;
 
 /** The one value every status-checked reply opens with: "all well". */
 const STATUS_OK = 0x80;
@@ -101,18 +118,16 @@ const HALT_TIMEOUT = 2000;
 const READY_TIMEOUT = 15_000; // an F1 page erase takes ~40 ms; this is slack, not expectation
 const CHUNK = 1024;
 
-/** Dongles worth offering in the chooser; the bench one is the plain V2. */
+/**
+ * What the chooser offers: the ST-Link V2 family, and only that family.
+ * The instructions above the button promise an ST-Link V2, the kit ships
+ * one, and a chooser that also listed a V1 or a V3 would offer probes
+ * this path has never been checked against.
+ */
 const STLINK_FILTERS = [
-  { vendorId: 0x0483, productId: 0x3744 }, // ST-Link V1
-  { vendorId: 0x0483, productId: 0x3747 }, // ST-Link V1, alternate firmware
   { vendorId: 0x0483, productId: 0x3748 }, // ST-Link V2 -- the dongle on this bench
   { vendorId: 0x0483, productId: 0x374a }, // ST-Link V2-1 without mass storage
   { vendorId: 0x0483, productId: 0x374b }, // ST-Link V2-1
-  { vendorId: 0x0483, productId: 0x3752 }, // ST-Link V3S
-  { vendorId: 0x0483, productId: 0x3753 }, // ST-Link V3E
-  { vendorId: 0x0483, productId: 0x3754 }, // ST-Link V3
-  { vendorId: 0x0483, productId: 0x3755 }, // ST-Link V3, no mass storage
-  { vendorId: 0x0483, productId: 0x3757 }, // ST-Link V3, no mass storage, alternate
 ];
 
 export type StlinkPhase = 'halt' | 'erase' | 'write' | 'verify';
@@ -217,7 +232,15 @@ export class StlinkConnection {
   static async open(): Promise<StlinkConnection> {
     const usb = (navigator as Navigator & { usb?: UsbApi }).usb;
     if (!usb) throw new Error('This browser cannot open USB devices -- use Chrome or Brave.');
-    const device = await usb.requestDevice({ filters: STLINK_FILTERS });
+    let device: UsbDevice;
+    try {
+      device = await usb.requestDevice({ filters: STLINK_FILTERS });
+    } catch (error) {
+      if (error instanceof Error && error.name === 'NotFoundError') {
+        throw new Error('ST-Link selection was canceled.');
+      }
+      throw error;
+    }
 
     try {
       await device.open();
@@ -225,7 +248,8 @@ export class StlinkConnection {
       throw new Error(
         `Could not open ${device.productName ?? 'the ST-Link'}: ${
           error instanceof Error ? error.message : String(error)
-        } (is the udev permission on its device node missing?)`,
+        }. On Linux that is a missing udev permission on its device node; ` +
+          'on Windows the probe must be bound to the WinUSB driver -- install it with Zadig.',
       );
     }
     if (!device.configurations.length) throw new Error('The ST-Link reported no configuration.');
@@ -255,7 +279,9 @@ export class StlinkConnection {
       throw new Error(
         `The ST-Link's debug interface is already in use: ${
           error instanceof Error ? error.message : String(error)
-        }. Close st-flash or OpenOCD, and make sure no stlink kernel module has claimed it.`,
+        }. On Linux, close st-flash or OpenOCD and make sure no stlink kernel module ` +
+          'has claimed it; on Windows, close STM32CubeProgrammer and bind the probe ' +
+          'to the WinUSB driver (Zadig).',
       );
     }
 
@@ -270,14 +296,17 @@ export class StlinkConnection {
   }
 
   /**
-   * Version, dialect entry (either one), debug port, chip id -- in that
-   * order, on the one instance that outlives them. The dialect is recorded
-   * here rather than at construction: everything after the entry, from the
+   * Version, whatever mode the firmware was left in, the SWD clock, the
+   * dialect entry (either one), the debug port, chip id -- in that order,
+   * on the one instance that outlives them. The dialect is recorded here
+   * rather than at construction: everything after the entry, from the
    * core-id command to the write-status dialect, has to run on whichever
    * one actually answered, and the fallback can swap it.
    */
   private async start(): Promise<void> {
     this.version = await this.getVersion();
+    await this.leaveStaleMode();
+    await this.setSwdClock();
     let api = this.apiFromVersion(this.version);
     let entered = await this.tryEnterSwd(api);
     if (!entered) {
@@ -292,6 +321,45 @@ export class StlinkConnection {
     this.api = api;
     await this.checkDebugPort();
     this.deviceId = (await this.read32(DBGMCU_IDCODE)) & 0xfff;
+  }
+
+  /**
+   * stlink's own open asks the firmware which mode it is sitting in and
+   * exits a stale one before touching SWD: DFU gets DFU_EXIT, a debug
+   * session left behind gets DEBUG_EXIT. Both commands are send-only --
+   * neither firmware path replies, and reading for a reply would hand its
+   * bytes to the next transfer and desync everything after it.
+   */
+  private async leaveStaleMode(): Promise<void> {
+    const reply = await this.command([CMD_GET_CURRENT_MODE], 2, null, 'reading the probe mode');
+    if (!reply || reply.length < 1) return;
+    const mode = reply[0];
+    if (mode === MODE_DFU) {
+      await this.command([CMD_DFU, DFU_EXIT], 0, null, 'exiting the probe DFU mode');
+    } else if (mode === MODE_DEBUG) {
+      await this.command([CMD_DEBUG, DEBUG_EXIT], 0, null, 'exiting the probe\'s stale debug session');
+    }
+  }
+
+  /**
+   * 950 kHz, the conservative divisor stlink sends for bench wiring.
+   * Probes older than J22 have no set-frequency command (stlink skips
+   * them too, keyed on the same version numbers), and a probe that
+   * refuses the command keeps its own default clock -- none of which is
+   * worth failing a connection over.
+   */
+  private async setSwdClock(): Promise<void> {
+    if (this.apiFromVersion(this.version) !== 2) return;
+    try {
+      await this.command(
+        [CMD_DEBUG, DEBUG_SET_SWCLK_FREQ, SWCLK_DIVISOR_950KHZ, 0],
+        2,
+        { status: true, retry: true },
+        'setting the SWD clock',
+      );
+    } catch {
+      // The firmware's own clock stands.
+    }
   }
 
   /** "V2J48S7" -> the dialect; the same numbers stlink keys its rules on. */

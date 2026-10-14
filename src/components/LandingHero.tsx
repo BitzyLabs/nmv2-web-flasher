@@ -28,7 +28,6 @@ import BoardArt from './BoardArt';
 import DeviceIntro from './DeviceIntro';
 import DevBoardPanel from './bitzy/DevBoardPanel';
 import { isDevBoard, isStm32 } from '@/lib/bitzy/devboards';
-import { flashBluePill } from '@/lib/bitzy/stm32flash';
 import {
   describeDeviceId,
   flashBluePillSwd,
@@ -251,7 +250,7 @@ export default function LandingHero() {
     ? null
     : heroSource?.category === 'devboards'
       ? heroSource?.mcu === 'stm32'
-        ? 'Flash complete. Set the BOOT0 jumper back to 0, press Reset, and the LED should blink.'
+        ? 'Flash complete. The chip was reset over SWD -- the LED should blink.'
         : 'Flash complete. Unplug the board and plug it back in -- the LED should blink.'
       : heroSource?.category === 'tools'
         ? 'Unplug it and plug it back in. To check the chip really holds this build, run the verify command from the project README.'
@@ -436,18 +435,23 @@ export default function LandingHero() {
   };
 
   const handleConnect = async () => {
+    // The STM32 path is WebUSB, not Web Serial: the kit ships an ST-Link,
+    // so this one click opens the device chooser and the probe client
+    // above takes it from there. Serial is every other device's door.
+    if (isStm32(selectedDevice)) {
+      await handleConnectStlink();
+      return;
+    }
     setIsConnecting(true);
     setStatus(t('status.connecting'));
 
     try {
       const port = await navigator.serial.requestPort();
-      // The STM32 ROM bootloader runs 8 data bits, even parity, 1 stop bit
-      // (AN2606); everything else on this site is a plain 8-N-1 link.
       await port.open({
         baudRate: 115200,
         dataBits: 8,
         stopBits: 1,
-        parity: isStm32(selectedDevice) ? 'even' : 'none',
+        parity: 'none',
         flowControl: 'none',
       });
 
@@ -488,6 +492,13 @@ export default function LandingHero() {
   };
 
   const startSerialLogging = async () => {
+    if (isStm32(selectedDevice)) {
+      setStatus(
+        'Serial logging is not available on this board: it is connected over the ' +
+          "ST-Link's SWD link, which carries no console output.",
+      );
+      return;
+    }
     if (!serialPortRef.current) {
       setStatus(t('status.connectFirst'));
       return;
@@ -963,53 +974,6 @@ export default function LandingHero() {
     return new Uint8Array(await response.arrayBuffer());
   };
 
-  // Over the ROM bootloader: AN3155 on the open serial port. A port that
-  // opens proves nothing about what answers on it, so a bootloader that
-  // says nothing is not left as "sync failed" -- the port itself is named:
-  // a built-in ttyS has no adapter behind it, and an ST-Link's virtual
-  // COM port only reaches PA10/PA9 when those pins are wired to it.
-  const flashBluePillFlow = async () => {
-    const data = await bluePillImage();
-    try {
-      await flashBluePill({
-        port: serialPortRef.current,
-        data,
-        onProgress: (percent, phase) => {
-          if (phase === 'write') {
-            setProgress(percent);
-            setStatus(t('status.flashing', { percent }));
-          } else if (phase === 'verify') {
-            setProgress(100);
-            setStatus('Verifying what was written...');
-          } else if (phase === 'erase') {
-            setStatus('Erasing flash...');
-          } else {
-            setStatus('Talking to the bootloader...');
-          }
-        },
-      });
-    } catch (error) {
-      const info = (serialPortRef.current?.getInfo?.() ?? {}) as {
-        usbVendorId?: number;
-      };
-      const guidance =
-        info.usbVendorId === undefined
-          ? ' This port has no USB adapter behind it (a built-in ttyS...) -- '
-            + 'pick your USB-UART adapter instead; it appears as ttyUSB or '
-            + 'ttyACM at the bottom of the port list.'
-          : info.usbVendorId === 0x0483
-            ? ' This port belongs to an ST-Link: its virtual COM port only '
-              + 'reaches PA10/PA9 when those pins are wired to it. For the '
-              + 'SWD pins this dongle is built for, use the ST-Link (SWD) '
-              + 'connect below.'
-            : '';
-      if (guidance && error instanceof Error) {
-        throw new Error(`${error.message}${guidance}`);
-      }
-      throw error;
-    }
-  };
-
   // Over SWD: the same bytes through the probe. The core stops first, the
   // F1 flash controller is driven the way st-flash drives it -- unlock,
   // erase every page the image touches, program, read every byte back --
@@ -1039,7 +1003,16 @@ export default function LandingHero() {
   };
 
   const handleStartFlashing = async () => {
-    if (!serialPortRef.current) {
+    // The gate asks for the link this device type actually got: the STM32
+    // path connects the ST-Link over WebUSB and never holds a serial port,
+    // so judging it by serial would answer "connect first" to somebody
+    // whose probe is already connected.
+    if (isStm32(selectedDevice)) {
+      if (!stlinkRef.current) {
+        setStatus(t('status.connectFirst'));
+        return;
+      }
+    } else if (!serialPortRef.current) {
       setStatus(t('status.connectFirst'));
       return;
     }
@@ -1068,23 +1041,15 @@ export default function LandingHero() {
         await stopSerialLogging();
       }
 
-      // DevBoard Tests: the Blue Pill flashes over whichever link is open --
-      // the ROM bootloader on serial, or the probe on SWD. Both read every
-      // byte back before saying done, and what each one did is said in the
-      // status line rather than assumed.
+      // DevBoard Tests: the Blue Pill flashes over the debug port and
+      // nothing else -- SWD through the probe, every byte read back before
+      // done, and then the chip is reset. No bootloader is involved, so
+      // there is no jumper to move either way.
       if (isStm32(selectedDevice)) {
-        if (stlinkRef.current) {
-          await flashBluePillSwdFlow();
-          setStatus(
-            'Flash complete and verified over SWD. The chip was reset -- the LED should blink.',
-          );
-        } else {
-          await flashBluePillFlow();
-          setStatus(
-            'Flash complete and verified. Set the BOOT0 jumper back to 0, press Reset, ' +
-              'and the LED should blink.',
-          );
-        }
+        await flashBluePillSwdFlow();
+        setStatus(
+          'Flash complete and verified over SWD. The chip was reset -- the LED should blink.',
+        );
         return;
       }
 
@@ -1490,24 +1455,6 @@ export default function LandingHero() {
                 {isConnected ? t('hero.disconnect') : t('hero.connect')}
                 <Usb className="ml-2 h-4 w-4" />
               </Button>
-              {isStm32(selectedDevice) && (
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleConnectStlink}
-                  disabled={
-                    isConnected ||
-                    isConnecting ||
-                    isFlashing ||
-                    !selectedDevice ||
-                    !selectedBoardVersion ||
-                    !selectedFirmware
-                  }
-                >
-                  Connect ST-Link (SWD)
-                  <Cpu className="ml-2 h-4 w-4" />
-                </Button>
-              )}
               <Button
                 className="w-full mb-4"
                 onClick={handleStartFlashing}

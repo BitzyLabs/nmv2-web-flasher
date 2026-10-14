@@ -12,20 +12,22 @@ type DevBoardPanelProps = {
  *
  * The ESP32 devkit flashes like every other board on this site -- plug it
  * in and the flasher finds boot mode on its own -- so it shows nothing.
- * The Blue Pill cannot: its ROM bootloader sits behind a BOOT0 jumper and
- * speaks through an external serial adapter, and those two facts are the
- * whole difference between Connect working and Connect timing out. The
- * manual CLI route lives with the firmware project itself; the page carries
- * one line.
+ * The Blue Pill has no such door: its ROM bootloader sits behind a BOOT0
+ * jumper and speaks through an external serial adapter, and this page
+ * never opens that door at all. The kit ships an ST-Link V2, so the board
+ * is reached through its debug port instead -- wires and nothing else.
+ * The line carries the wiring and the one constraint worth stating up
+ * front: ST-Link V2 only.
  */
 export default function DevBoardPanel({ device }: DevBoardPanelProps) {
   if (!isDevBoard(device) || !isStm32(device)) return null;
 
   return (
     <p className="mx-auto w-full max-w-xl text-sm leading-relaxed text-[var(--color-muted-warm)]">
-      <span className="font-semibold text-[var(--color-ink)]">Blue Pill:</span> set BOOT0
-      to 1 and press Reset, wire a USB-serial adapter (TX → PA10, RX → PA9, GND
-      → GND), then pick that port when you press Connect.
+      <span className="font-semibold text-[var(--color-ink)]">Blue Pill:</span> wire an
+      ST-Link V2 to the board (SWDIO → SWDIO, SWCLK → SWCLK, GND → GND, 3V3
+      → 3V3), then press Connect and pick it in the list. This path works
+      with an ST-Link V2 only -- no BOOT0 jumper, no serial adapter.
     </p>
   );
 }

@@ -739,13 +739,17 @@ def patch_footer() -> None:
         "",
     )
     # The reader asked for these by name: the flasher this fork is built on,
-    # and the two Web Serial implementations the Blue Pill path was written
-    # against -- Gamadril (MIT) and yanxke (Apache-2.0), as stm32flash.ts
-    # records. The upstream repo's name inside the BitMaker link is the one
+    # and -- from the moment the Blue Pill's path moved to WebUSB -- the
+    # ST-Link donor the reader picked, Hypothesis-Magic/stm32-web-flasher.
+    # The first trade still writes the upstream-era credits: it is what a
+    # fresh sync starts from. The second, run after the class sweep above
+    # has carried those links to the store's footer, swaps the two Web
+    # Serial names for that donor -- so both syncs land on the same three
+    # names. The upstream repo's name inside the BitMaker link is the one
     # old-brand string validation lets survive, and only in here.
     changed |= inject_once(
         path,
-        "Gamadril",
+        "              <span>Credits to</span>\n",
         "            <a\n"
         '              href="https://github.com/WantClue"\n'
         "              target=\"_blank\"\n"
@@ -846,6 +850,41 @@ def patch_footer() -> None:
         path,
         'className="transition-colors hover:text-white/70"',
         'className="transition-colors hover:text-[var(--color-bitzy)]"',
+    )
+    # The terms, privacy and credits now carry the store's class strings,
+    # so the credit swap runs against the same text on a fresh sync and on
+    # this fork's current footer: the Web Serial pair goes, the ST-Link
+    # donor the reader chose takes their place.
+    changed |= inject_once(
+        path,
+        "Hypothesis-Magic",
+        "              <span aria-hidden=\"true\">·</span>\n"
+        "              <a\n"
+        '                href="https://github.com/Gamadril/stm-serial-flasher"\n'
+        '                target="_blank"\n'
+        '                rel="noopener noreferrer"\n'
+        '                className="transition-colors hover:text-[var(--color-bitzy)]"\n'
+        "              >\n"
+        "                Gamadril\n"
+        "              </a>\n"
+        "              <span aria-hidden=\"true\">·</span>\n"
+        "              <a\n"
+        '                href="https://github.com/yanxke/stm32webflash"\n'
+        '                target="_blank"\n'
+        '                rel="noopener noreferrer"\n'
+        '                className="transition-colors hover:text-[var(--color-bitzy)]"\n'
+        "              >\n"
+        "                Yanxke\n"
+        "              </a>\n",
+        "              <span aria-hidden=\"true\">·</span>\n"
+        "              <a\n"
+        '                href="https://github.com/Hypothesis-Magic/stm32-web-flasher"\n'
+        '                target="_blank"\n'
+        '                rel="noopener noreferrer"\n'
+        '                className="transition-colors hover:text-[var(--color-bitzy)]"\n'
+        "              >\n"
+        "                Hypothesis-Magic\n"
+        "              </a>\n",
     )
     # The privacy/terms notice is a small dialog over the page; the page is
     # light now, so it reads like every other surface -- white card, ink
@@ -1841,7 +1880,6 @@ def patch_device_shops() -> None:
 # carries them untouched; all they need is to be noticed when they go missing.
 DEVBOARD_FILES = (
     "src/lib/bitzy/devboards.ts",
-    "src/lib/bitzy/stm32flash.ts",
     "src/lib/bitzy/stlink.ts",
     "src/components/bitzy/DevBoardPanel.tsx",
     "public/pictures/esp32-n16r8.png",
@@ -1911,8 +1949,8 @@ def patch_devboards() -> None:
 def patch_devboard_flows() -> None:
     """LandingHero: the Continue button, the STM32 path, the instructions.
 
-    Eight anchors in one file, split out so a failure names the step rather
-    than the file. Every one is exact text and every call carries a marker
+    A chain of anchors in one file, split out so a failure names the step
+    rather than the file. Every one is exact text and every call carries a marker
     this patch alone writes: a second run -- or a merge that stacked
     upstream's edits around ours -- sees the work as done instead of
     demanding anchors the file no longer has. The wrapping ones still keep
@@ -1928,17 +1966,18 @@ def patch_devboard_flows() -> None:
         "import BoardArt from './BoardArt';\n"
         "import DeviceIntro from './DeviceIntro';\n"
         "import DevBoardPanel from './bitzy/DevBoardPanel';\n"
-        "import { isDevBoard, isStm32 } from '@/lib/bitzy/devboards';\n"
-        "import { flashBluePill } from '@/lib/bitzy/stm32flash';",
+        "import { isDevBoard, isStm32 } from '@/lib/bitzy/devboards';",
     )
 
-    # The second transport onto the same flash: the SWD probe client, its
-    # device-id phrasing for the connect status, and the entry point.
+    # The probe client: its device-id phrasing for the connect status and
+    # the entry point, stacked on the import line the chain above writes.
+    # The Blue Pill's serial implementation is gone -- the ST-Link path is
+    # the STM32 path now -- so nothing else rides along.
     changed |= inject_once(
         path,
         "from '@/lib/bitzy/stlink';",
-        "import { flashBluePill } from '@/lib/bitzy/stm32flash';",
-        "import { flashBluePill } from '@/lib/bitzy/stm32flash';\n"
+        "import { isDevBoard, isStm32 } from '@/lib/bitzy/devboards';",
+        "import { isDevBoard, isStm32 } from '@/lib/bitzy/devboards';\n"
         "import {\n"
         "  describeDeviceId,\n"
         "  flashBluePillSwd,\n"
@@ -2003,10 +2042,11 @@ def patch_devboard_flows() -> None:
         "  const handleStartFlashing = async () => {",
     )
 
-    # Two links, one image: the flow above is traded for a shared fetch
-    # helper, a serial flow that now says *which end* was silent, and its
-    # SWD twin. The trade anchors on the text the previous chain writes,
-    # so a fresh sync lands both in order.
+    # One image, one link: the flow above is traded for a shared fetch
+    # helper and the SWD flow that consumes it. The serial arm is gone --
+    # the kit ships an ST-Link and the STM32 path never touches Web
+    # Serial. The trade anchors on the text the previous chain writes,
+    # so a fresh sync lands it in order.
     changed |= inject_once(
         path,
         "const flashBluePillSwdFlow = async () => {",
@@ -2062,53 +2102,6 @@ def patch_devboard_flows() -> None:
         "    return new Uint8Array(await response.arrayBuffer());\n"
         "  };\n"
         "\n"
-        "  // Over the ROM bootloader: AN3155 on the open serial port. A port that\n"
-        "  // opens proves nothing about what answers on it, so a bootloader that\n"
-        "  // says nothing is not left as \"sync failed\" -- the port itself is named:\n"
-        "  // a built-in ttyS has no adapter behind it, and an ST-Link's virtual\n"
-        "  // COM port only reaches PA10/PA9 when those pins are wired to it.\n"
-        "  const flashBluePillFlow = async () => {\n"
-        "    const data = await bluePillImage();\n"
-        "    try {\n"
-        "      await flashBluePill({\n"
-        "        port: serialPortRef.current,\n"
-        "        data,\n"
-        "        onProgress: (percent, phase) => {\n"
-        "          if (phase === 'write') {\n"
-        "            setProgress(percent);\n"
-        "            setStatus(t('status.flashing', { percent }));\n"
-        "          } else if (phase === 'verify') {\n"
-        "            setProgress(100);\n"
-        "            setStatus('Verifying what was written...');\n"
-        "          } else if (phase === 'erase') {\n"
-        "            setStatus('Erasing flash...');\n"
-        "          } else {\n"
-        "            setStatus('Talking to the bootloader...');\n"
-        "          }\n"
-        "        },\n"
-        "      });\n"
-        "    } catch (error) {\n"
-        "      const info = (serialPortRef.current?.getInfo?.() ?? {}) as {\n"
-        "        usbVendorId?: number;\n"
-        "      };\n"
-        "      const guidance =\n"
-        "        info.usbVendorId === undefined\n"
-        "          ? ' This port has no USB adapter behind it (a built-in ttyS...) -- '\n"
-        "            + 'pick your USB-UART adapter instead; it appears as ttyUSB or '\n"
-        "            + 'ttyACM at the bottom of the port list.'\n"
-        "          : info.usbVendorId === 0x0483\n"
-        "            ? ' This port belongs to an ST-Link: its virtual COM port only '\n"
-        "              + 'reaches PA10/PA9 when those pins are wired to it. For the '\n"
-        "              + 'SWD pins this dongle is built for, use the ST-Link (SWD) '\n"
-        "              + 'connect below.'\n"
-        "            : '';\n"
-        "      if (guidance && error instanceof Error) {\n"
-        "        throw new Error(`${error.message}${guidance}`);\n"
-        "      }\n"
-        "      throw error;\n"
-        "    }\n"
-        "  };\n"
-        "\n"
         "  // Over SWD: the same bytes through the probe. The core stops first, the\n"
         "  // F1 flash controller is driven the way st-flash drives it -- unlock,\n"
         "  // erase every page the image touches, program, read every byte back --\n"
@@ -2138,34 +2131,14 @@ def patch_devboard_flows() -> None:
         "  };\n",
     )
 
-    # The Blue Pill needs even parity (AN2606); nothing else on this site
-    # does, so only its connect opens the port that way.
-    changed |= inject_once(
-        path,
-        "parity: isStm32(selectedDevice) ? 'even' : 'none',",
-        "      const port = await navigator.serial.requestPort();\n"
-        "      await port.open({\n"
-        "        baudRate: 115200,\n"
-        "        dataBits: 8,\n"
-        "        stopBits: 1,\n"
-        "        parity: 'none',\n"
-        "        flowControl: 'none',\n"
-        "      });",
-        "      const port = await navigator.serial.requestPort();\n"
-        "      // The STM32 ROM bootloader runs 8 data bits, even parity, 1 stop bit\n"
-        "      // (AN2606); everything else on this site is a plain 8-N-1 link.\n"
-        "      await port.open({\n"
-        "        baudRate: 115200,\n"
-        "        dataBits: 8,\n"
-        "        stopBits: 1,\n"
-        "        parity: isStm32(selectedDevice) ? 'even' : 'none',\n"
-        "        flowControl: 'none',\n"
-        "      });",
-    )
 
+    # The flash step for the Blue Pill: SWD, and only SWD. The anchor is
+    # upstream's own try-head; the marker is the success line this branch
+    # writes -- a string no later trade removes, so the retired serial arm
+    # cannot creep back in on a re-run the way its old marker could.
     changed |= inject_once(
         path,
-        "await flashBluePillFlow();",
+        "'Flash complete and verified over SWD. The chip was reset -- the LED should blink.',",
         "    try {\n"
         "      // Stop logging if it's active\n"
         "      if (isLogging) {\n"
@@ -2177,58 +2150,46 @@ def patch_devboard_flows() -> None:
         "        await stopSerialLogging();\n"
         "      }\n"
         "\n"
-        "      // DevBoard Tests: the Blue Pill talks to its ROM bootloader over the\n"
-        "      // port that is already open, so it never touches esptool or the ESP\n"
-        "      // reset dance below. What the bootloader did -- including reading every\n"
-        "      // byte back -- is said in the status line rather than assumed.\n"
+        "      // DevBoard Tests: the Blue Pill flashes over the debug port and\n"
+        "      // nothing else -- SWD through the probe, every byte read back before\n"
+        "      // done, and then the chip is reset. No bootloader is involved, so\n"
+        "      // there is no jumper to move either way.\n"
         "      if (isStm32(selectedDevice)) {\n"
-        "        await flashBluePillFlow();\n"
+        "        await flashBluePillSwdFlow();\n"
         "        setStatus(\n"
-        "          'Flash complete and verified. Set the BOOT0 jumper back to 0, press Reset, ' +\n"
-        "            'and the LED should blink.',\n"
+        "          'Flash complete and verified over SWD. The chip was reset -- the LED should blink.',\n"
         "        );\n"
         "        return;\n"
         "      }",
     )
 
-    # Which link runs depends only on which one was opened: the probe's
-    # ref being set is the whole branch condition. Each arm says its own
-    # success line, because the serial one still owes the user a BOOT0
-    # jumper to move back and the SWD one does not.
+    # The gate answers for the link the device type actually got: the STM32
+    # path connects the probe over WebUSB and never holds a serial port, so
+    # judging it by serial would answer "connect first" to somebody whose
+    # ST-Link is already connected. Anchored on the head the Continue-chain
+    # writes (or upstream's, before any of this ran).
     changed |= inject_once(
         path,
-        "await flashBluePillSwdFlow();",
-        "      // DevBoard Tests: the Blue Pill talks to its ROM bootloader over the\n"
-        "      // port that is already open, so it never touches esptool or the ESP\n"
-        "      // reset dance below. What the bootloader did -- including reading every\n"
-        "      // byte back -- is said in the status line rather than assumed.\n"
-        "      if (isStm32(selectedDevice)) {\n"
-        "        await flashBluePillFlow();\n"
-        "        setStatus(\n"
-        "          'Flash complete and verified. Set the BOOT0 jumper back to 0, press Reset, ' +\n"
-        "            'and the LED should blink.',\n"
-        "        );\n"
+        "The gate asks for the link this device type actually got",
+        "  const handleStartFlashing = async () => {\n"
+        "    if (!serialPortRef.current) {\n"
+        "      setStatus(t('status.connectFirst'));\n"
+        "      return;\n"
+        "    }",
+        "  const handleStartFlashing = async () => {\n"
+        "    // The gate asks for the link this device type actually got: the STM32\n"
+        "    // path connects the ST-Link over WebUSB and never holds a serial port,\n"
+        "    // so judging it by serial would answer \"connect first\" to somebody\n"
+        "    // whose probe is already connected.\n"
+        "    if (isStm32(selectedDevice)) {\n"
+        "      if (!stlinkRef.current) {\n"
+        "        setStatus(t('status.connectFirst'));\n"
         "        return;\n"
-        "      }",
-        "      // DevBoard Tests: the Blue Pill flashes over whichever link is open --\n"
-        "      // the ROM bootloader on serial, or the probe on SWD. Both read every\n"
-        "      // byte back before saying done, and what each one did is said in the\n"
-        "      // status line rather than assumed.\n"
-        "      if (isStm32(selectedDevice)) {\n"
-        "        if (stlinkRef.current) {\n"
-        "          await flashBluePillSwdFlow();\n"
-        "          setStatus(\n"
-        "            'Flash complete and verified over SWD. The chip was reset -- the LED should blink.',\n"
-        "          );\n"
-        "        } else {\n"
-        "          await flashBluePillFlow();\n"
-        "          setStatus(\n"
-        "            'Flash complete and verified. Set the BOOT0 jumper back to 0, press Reset, ' +\n"
-        "              'and the LED should blink.',\n"
-        "          );\n"
-        "        }\n"
-        "        return;\n"
-        "      }",
+        "      }\n"
+        "    } else if (!serialPortRef.current) {\n"
+        "      setStatus(t('status.connectFirst'));\n"
+        "      return;\n"
+        "    }",
     )
 
     # Wrapping patch: the original Button survives inside the else branch,
@@ -2298,7 +2259,7 @@ def patch_devboard_flows() -> None:
         "    ? null\n"
         "    : heroSource?.category === 'devboards'\n"
         "      ? heroSource?.mcu === 'stm32'\n"
-        "        ? 'Flash complete. Set the BOOT0 jumper back to 0, press Reset, and the LED should blink.'\n"
+        "        ? 'Flash complete. The chip was reset over SWD -- the LED should blink.'\n"
         "        : 'Flash complete. Unplug the board and plug it back in -- the LED should blink.'\n"
         "      : heroSource?.category === 'tools'\n"
         "        ? 'Unplug it and plug it back in. To check the chip really holds this build, run the verify command from the project README.'\n"
@@ -2344,6 +2305,53 @@ def patch_devboard_flows() -> None:
         "    setIsConnecting(true);",
     )
 
+    # The STM32 connect itself: WebUSB first, serial for the rest. The
+    # anchor is the head the chain above writes, so on a fresh sync this
+    # lands directly after the probe client it calls -- and it must land
+    # after it, or the chain above would find its own anchor already
+    # rearranged. On this fork's file both markers are present and both
+    # simply stand down.
+    changed |= inject_once(
+        path,
+        "// The STM32 path is WebUSB, not Web Serial:",
+        "  const handleConnect = async () => {\n"
+        "    setIsConnecting(true);",
+        "  const handleConnect = async () => {\n"
+        "    // The STM32 path is WebUSB, not Web Serial: the kit ships an ST-Link,\n"
+        "    // so this one click opens the device chooser and the probe client\n"
+        "    // above takes it from there. Serial is every other device's door.\n"
+        "    if (isStm32(selectedDevice)) {\n"
+        "      await handleConnectStlink();\n"
+        "      return;\n"
+        "    }\n"
+        "    setIsConnecting(true);",
+    )
+
+    # Logging reads a serial console, and an ST-Link's SWD link has none to
+    # read. Without this the button would light up for a connected probe and
+    # then answer "connect first" to somebody who already is.
+    changed |= inject_once(
+        path,
+        "Serial logging is not available on this board",
+        "  const startSerialLogging = async () => {\n"
+        "    if (!serialPortRef.current) {\n"
+        "      setStatus(t('status.connectFirst'));\n"
+        "      return;\n"
+        "    }",
+        "  const startSerialLogging = async () => {\n"
+        "    if (isStm32(selectedDevice)) {\n"
+        "      setStatus(\n"
+        "        'Serial logging is not available on this board: it is connected over the ' +\n"
+        "          \"ST-Link's SWD link, which carries no console output.\",\n"
+        "      );\n"
+        "      return;\n"
+        "    }\n"
+        "    if (!serialPortRef.current) {\n"
+        "      setStatus(t('status.connectFirst'));\n"
+        "      return;\n"
+        "    }",
+    )
+
     # Disconnect has to mean the same thing for both links, so the probe is
     # released in the same try block that closes the serial port.
     changed |= inject_once(
@@ -2363,42 +2371,7 @@ def patch_devboard_flows() -> None:
         "      }",
     )
 
-    # The second door, only on the board that has a debug port: outline
-    # rather than crimson so the two never read as the same button, and
-    # gated off once anything is connected -- one link at a time, and the
-    # main button already shows how to leave it.
-    changed |= inject_once(
-        path,
-        "Connect ST-Link (SWD)",
-        "              </Button>\n"
-        "              <Button\n"
-        '                className="w-full mb-4"\n'
-        "                onClick={handleStartFlashing}",
-        "              </Button>\n"
-        "              {isStm32(selectedDevice) && (\n"
-        "                <Button\n"
-        '                  variant="outline"\n'
-        '                  className="w-full"\n'
-        "                  onClick={handleConnectStlink}\n"
-        "                  disabled={\n"
-        "                    isConnected ||\n"
-        "                    isConnecting ||\n"
-        "                    isFlashing ||\n"
-        "                    !selectedDevice ||\n"
-        "                    !selectedBoardVersion ||\n"
-        "                    !selectedFirmware\n"
-        "                  }\n"
-        "                >\n"
-        "                  Connect ST-Link (SWD)\n"
-        "                  <Cpu className=\"ml-2 h-4 w-4\" />\n"
-        "                </Button>\n"
-        "              )}\n"
-        "              <Button\n"
-        '                className="w-full mb-4"\n'
-        "                onClick={handleStartFlashing}",
-    )
-
-    note(changed, "LandingHero.tsx: Continue To Flash, STM32 paths (UART + ST-Link SWD), instructions")
+    note(changed, "LandingHero.tsx: Continue To Flash, STM32 path (ST-Link over WebUSB), instructions")
 
 
 def _filter_array_rows(
@@ -2843,20 +2816,22 @@ type DevBoardPanelProps = {
  *
  * The ESP32 devkit flashes like every other board on this site -- plug it
  * in and the flasher finds boot mode on its own -- so it shows nothing.
- * The Blue Pill cannot: its ROM bootloader sits behind a BOOT0 jumper and
- * speaks through an external serial adapter, and those two facts are the
- * whole difference between Connect working and Connect timing out. The
- * manual CLI route lives with the firmware project itself; the page carries
- * one line.
+ * The Blue Pill has no such door: its ROM bootloader sits behind a BOOT0
+ * jumper and speaks through an external serial adapter, and this page
+ * never opens that door at all. The kit ships an ST-Link V2, so the board
+ * is reached through its debug port instead -- wires and nothing else.
+ * The line carries the wiring and the one constraint worth stating up
+ * front: ST-Link V2 only.
  */
 export default function DevBoardPanel({ device }: DevBoardPanelProps) {
   if (!isDevBoard(device) || !isStm32(device)) return null;
 
   return (
     <p className="mx-auto w-full max-w-xl text-sm leading-relaxed text-[var(--color-muted-warm)]">
-      <span className="font-semibold text-[var(--color-ink)]">Blue Pill:</span> set BOOT0
-      to 1 and press Reset, wire a USB-serial adapter (TX → PA10, RX → PA9, GND
-      → GND), then pick that port when you press Connect.
+      <span className="font-semibold text-[var(--color-ink)]">Blue Pill:</span> wire an
+      ST-Link V2 to the board (SWDIO → SWDIO, SWCLK → SWCLK, GND → GND, 3V3
+      → 3V3), then press Connect and pick it in the list. This path works
+      with an ST-Link V2 only -- no BOOT0 jumper, no serial adapter.
     </p>
   );
 }
@@ -2868,8 +2843,8 @@ def patch_devboard_panel() -> None:
 
     The ESP32 had two instruction panels (web flashing and esptool.py); both
     are dropped entirely -- the board flashes straight from the picker now.
-    The STM32 keeps one compact line, because its BOOT0 jumper and external
-    serial wire are still on the reader before Connect can work.
+    The STM32 keeps one compact line: the wiring for its ST-Link and the
+    one thing Connect cannot work without.
     """
     path = ROOT / "src" / "components" / "bitzy" / "DevBoardPanel.tsx"
     current = path.read_text() if path.exists() else ""
@@ -3418,12 +3393,11 @@ def validate() -> None:
     for href in (
         "https://github.com/WantClue",
         f"https://github.com/{UPSTREAM_REPO_PATH}",
-        "https://github.com/Gamadril/stm-serial-flasher",
-        "https://github.com/yanxke/stm32webflash",
+        "https://github.com/Hypothesis-Magic/stm32-web-flasher",
     ):
         if href not in footer_text:
             problems.append(f"Footer.tsx: no credit link to {href}")
-    for name in ("WantClue", "BitMaker", "Gamadril", "Yanxke"):
+    for name in ("WantClue", "BitMaker", "Hypothesis-Magic"):
         if f"\n                {name}\n" not in footer_text:
             problems.append(f"Footer.tsx: {name} is not credited by name")
 
@@ -3442,7 +3416,7 @@ def validate() -> None:
     ):
         if gone in panel:
             problems.append(f"DevBoardPanel.tsx: instruction panel remnant {gone!r}")
-    for needed in ("BOOT0", "PA10", "PA9", "isStm32"):
+    for needed in ("ST-Link V2", "SWDIO", "SWCLK", "isStm32"):
         if needed not in panel:
             problems.append(f"DevBoardPanel.tsx: {needed!r} missing (one-line panel)")
     if "text-white" in panel:
@@ -3487,20 +3461,17 @@ def validate() -> None:
 
     for needle in (
         "Continue To Flash",
-        "flashBluePillFlow",
-        "flashBluePill({",
         "DevBoardPanel",
-        "parity: isStm32",
         "=== 'devboards'",
         "value={selectedFirmware}",
-        # The second transport: the ST-Link button, the SWD flash flow, and
-        # the two port diagnostics that turn a silent bootloader into a
-        # sentence naming what was actually picked.
-        "Connect ST-Link (SWD)",
+        # The STM32 path: Connect routes to WebUSB, the gate judges the
+        # probe rather than a port that will never open, and the SWD flow
+        # is the only Blue Pill flash arm left.
+        "// The STM32 path is WebUSB, not Web Serial:",
+        "The gate asks for the link this device type actually got",
+        "Serial logging is not available on this board",
         "flashBluePillSwdFlow",
         "handleConnectStlink",
-        "built-in ttyS",
-        "virtual COM port",
     ):
         if needle not in hero:
             problems.append(f"LandingHero.tsx: {needle!r} missing (DevBoard flow)")

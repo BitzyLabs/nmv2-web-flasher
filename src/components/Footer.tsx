@@ -120,21 +120,12 @@ export default function Footer() {
               </a>
               <span aria-hidden="true">·</span>
               <a
-                href="https://github.com/Gamadril/stm-serial-flasher"
+                href="https://github.com/Hypothesis-Magic/stm32-web-flasher"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="transition-colors hover:text-[var(--color-bitzy)]"
               >
-                Gamadril
-              </a>
-              <span aria-hidden="true">·</span>
-              <a
-                href="https://github.com/yanxke/stm32webflash"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="transition-colors hover:text-[var(--color-bitzy)]"
-              >
-                Yanxke
+                Hypothesis-Magic
               </a>
             </div>
           </div>
