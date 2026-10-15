@@ -89,8 +89,8 @@ export default function MobileGate() {
           NEEDS A PC<span className="animate-pulse text-[#DC143C]">_</span>
         </p>
         <p className="mt-4 max-w-sm text-sm leading-relaxed text-[#A6A093]">
-          Your phone is a lovely camera and a terrible flasher. Open me on a desktop browser and we
-          will have your boards blinking in seconds.
+          Your phone is a lovely camera, but it's a terrible flasher. Open me on a desktop browser
+          and we will have your boards blinking in seconds.
         </p>
         <a
           href={STORE_URL}
