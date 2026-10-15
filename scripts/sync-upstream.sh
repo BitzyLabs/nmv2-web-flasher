@@ -63,6 +63,7 @@ KEEP=(
   .bitzylabs-overlay
   scripts/apply-bitzylabs-branding.py
   scripts/sync-upstream.sh
+  scripts/upstream-mirror-test.sh
   .github/workflows/nextjs.yml
   .github/workflows/update-firmware.yml
   .github/workflows/sync-upstream.yml

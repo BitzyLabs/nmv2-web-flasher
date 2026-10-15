@@ -10,6 +10,10 @@ name: Sync upstream
 # build-checks the result and pushes. The push is a fast-forward because it is
 # a merge -- a hard reset would rewrite main and be rejected every night.
 #
+# Before the sync touches anything, scripts/upstream-mirror-test.sh proves
+# the mechanism itself on a simulated upstream: churn night, quiet night,
+# and the two ways drift must fail loudly before anything is pushed.
+#
 # Upstream is pulled daily, a little after the firmware bot so the two jobs do
 # not collide.
 
@@ -43,6 +47,16 @@ jobs:
         with:
           node-version: "20"
           cache: npm
+
+      # Before the real sync is allowed to touch anything, the harness
+      # plays three nights against a simulated upstream in a temp mirror:
+      # churn (merge + re-brand + gates + fast-forward push), quiet
+      # (already in step, HEAD unmoved), and drift (a chain's marker gone
+      # and an anchor reworded -- both must fail, before any push). A red
+      # here means the mechanism cannot be trusted tonight, so the sync
+      # does not get to run behind it.
+      - name: Mirror harness
+        run: ./scripts/upstream-mirror-test.sh
 
       # The script does everything: fetch, merge, restore tooling, re-brand,
       # build-check, commit and push. HEAD before and after is the only honest

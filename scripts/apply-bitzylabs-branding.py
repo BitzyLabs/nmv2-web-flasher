@@ -3254,6 +3254,199 @@ def sweep_marks() -> None:
 # --- Validation ------------------------------------------------------------
 
 
+# --- The chain audit --------------------------------------------------------
+#
+# Every chain is idempotent by fingerprint: inject_once and inject_rows key
+# on a marker line only their own output writes, and replace_once judges its
+# whole replacement verbatim. Those fingerprints are how a re-run knows the
+# work landed, and until now nothing else checked them. The failure this
+# exists for has no other symptom: the sync resolves in upstream's favour,
+# upstream rewords around an anchor, or a later chain trades a line an
+# earlier one keyed on -- and the next run either re-fires into a nest or
+# does not fire at all, while validation stays green because the needles
+# only know the end states somebody wrote down.
+#
+# So the fingerprints are read out of this file's own source and judged
+# against the tree after every run, --check included. A marker gone, or a
+# replacement gone while its anchor survives, means the chain did not land.
+# New chains join the audit for free; there is no needle to remember.
+
+AUDIT_EXEMPT: dict[tuple[str, str], str] = {
+    # (relative path, fingerprint): why a full run may legitimately leave
+    # this fingerprint out of the file. Every entry states its reason; an
+    # exemption nobody can explain is a bug in the chain it hides.
+}
+
+AUDIT_CHAIN_FNS = {
+    "inject_once",
+    "inject_rows",
+    "replace_once",
+    "replace_if_present",
+    "replace_everywhere",
+}
+
+
+def _chain_audit_problems() -> list[str]:
+    """Judge every chain's fingerprint against the tree it just ran on."""
+    import ast
+
+    source = Path(__file__).read_text()
+    tree = ast.parse(source)
+    problems: list[str] = []
+    cache: dict[str, str] = {}
+
+    def text_of(rel: str) -> str | None:
+        if rel not in cache:
+            target = ROOT / rel
+            if not target.is_file():
+                return None
+            cache[rel] = target.read_text()
+        return cache[rel]
+
+    def literal(node: ast.AST | None) -> str | None:
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return node.value
+        return None
+
+    def rel_of(node: ast.AST | None) -> str | None:
+        parts: list[str] = []
+        while isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
+            right = literal(node.right)
+            if right is None:
+                return None
+            parts.append(right)
+            node = node.left
+        if isinstance(node, ast.Name) and node.id == "ROOT" and parts:
+            return "/".join(reversed(parts))
+        return None
+
+    # Module-level constants are in scope everywhere; each function's own
+    # bindings layer on top with their later lines.
+    module_names: dict[str, list[tuple[int, str]]] = {}
+    for node in tree.body:
+        if isinstance(node, ast.Assign):
+            rel = rel_of(node.value)
+            if rel:
+                for target in node.targets:
+                    if isinstance(target, ast.Name):
+                        module_names[target.id] = [(node.lineno, rel)]
+
+    for fn in (n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)):
+        # The helpers call each other (inject_once wraps replace_once, and
+        # so on); those plumbing calls are audited where the chains call
+        # the helpers, with the chain's own arguments.
+        if fn.name in AUDIT_CHAIN_FNS:
+            continue
+
+        # Every `name = ROOT / ...` in this function, by name and line, and
+        # every `for path in (modal, board)`: inside its body `path` is each
+        # tuple member, after it the last one. Any first argument may be a
+        # name, a bare ROOT chain, or the loop variable, so the resolver
+        # below handles all three.
+        names: dict[str, list[tuple[int, str]]] = {k: list(v) for k, v in module_names.items()}
+        ranges: list[tuple[int, int, list[str]]] = []
+        for node in ast.walk(fn):
+            if isinstance(node, ast.Assign):
+                rel = rel_of(node.value)
+                if rel:
+                    for target in node.targets:
+                        if isinstance(target, ast.Name):
+                            names.setdefault(target.id, []).append((node.lineno, rel))
+            elif isinstance(node, ast.For) and isinstance(node.target, ast.Name) and node.target.id == "path":
+                values = node.iter.elts if isinstance(node.iter, (ast.Tuple, ast.List)) else []
+                rels = []
+                for value in values:
+                    rel = rel_of(value)
+                    if rel is None and isinstance(value, ast.Name):
+                        prior = [r for line, r in names.get(value.id, []) if line <= node.lineno]
+                        rel = prior[-1] if prior else None
+                    if rel:
+                        rels.append(rel)
+                if rels:
+                    ranges.append((node.lineno, node.end_lineno or node.lineno, rels))
+
+        def resolve(arg: ast.AST | None, line: int) -> list[str]:
+            rel = rel_of(arg)
+            if rel:
+                return [rel]
+            if not isinstance(arg, ast.Name):
+                return []
+            inf = 10**9
+            candidates: list[tuple[int, int, list[str]]] = [
+                (start, inf, [r]) for start, r in names.get(arg.id, [])
+            ]
+            if arg.id == "path":
+                for start, end, rels in ranges:
+                    candidates.append((start, end, rels))
+                    candidates.append((end + 1, inf, rels[-1:]))
+            live = [c for c in candidates if c[0] <= line]
+            if not live:
+                return []
+            _, end, rels = max(live, key=lambda c: c[0])
+            return rels if line <= end else rels[-1:]
+
+        for call in (n for n in ast.walk(fn) if isinstance(n, ast.Call)):
+            if not (isinstance(call.func, ast.Name) and call.func.id in AUDIT_CHAIN_FNS):
+                continue
+            targets = resolve(call.args[0], call.lineno) if call.args else []
+            # Outside every known binding (a path handed in from elsewhere):
+            # the call is real, so an unresolvable target is itself a
+            # finding -- an unauditable chain is the gap this audit closes.
+            if not targets:
+                problems.append(
+                    f"{Path(__file__).name}:{call.lineno}: {call.func.id}() target "
+                    "path could not be resolved for the chain audit"
+                )
+                continue
+            call_line = source.splitlines()[call.lineno - 1].strip()
+
+            if call.func.id in ("inject_once", "inject_rows"):
+                marker_index = 1 if call.func.id == "inject_once" else 3
+                marker = literal(call.args[marker_index]) if len(call.args) > marker_index else None
+                if marker is None:
+                    problems.append(
+                        f"{Path(__file__).name}:{call.lineno}: {call.func.id}() marker "
+                        "is not a literal, so the audit cannot judge it"
+                    )
+                    continue
+                for rel in targets:
+                    if (rel, marker) in AUDIT_EXEMPT:
+                        continue
+                    body = text_of(rel)
+                    if body is None:
+                        problems.append(f"{rel}: missing (chain audit, {call.func.id})")
+                    elif marker not in body:
+                        problems.append(
+                            f"{rel}: marker {marker.splitlines()[0][:70]!r} gone "
+                            f"({Path(__file__).name}:{call.lineno} {call_line[:60]}) -- "
+                            "the chain did not land"
+                        )
+                continue
+
+            # The replace family: the anchor may legitimately be gone (upstream
+            # removed what we rebranded, which is the outcome we wanted), but
+            # anchor present with the replacement absent means the chain has
+            # not run -- or something later traded its output away, which is
+            # how a re-run re-fires into a nest.
+            old = literal(call.args[1]) if len(call.args) > 1 else None
+            new = literal(call.args[2]) if len(call.args) > 2 else None
+            if old is None or new is None:
+                continue
+            for rel in targets:
+                if (rel, new or old) in AUDIT_EXEMPT:
+                    continue
+                body = text_of(rel)
+                if body is None:
+                    problems.append(f"{rel}: missing (chain audit, {call.func.id})")
+                elif old in body and new not in body:
+                    problems.append(
+                        f"{rel}: anchor {old.splitlines()[0][:70]!r} present but the "
+                        f"replacement is gone ({Path(__file__).name}:{call.lineno}) -- "
+                        "the chain did not land"
+                    )
+    return problems
+
+
 def validate() -> None:
     problems: list[str] = []
 
@@ -3732,6 +3925,27 @@ def validate() -> None:
         if needle not in catalog:
             problems.append(f"devices.ts: {needle!r} missing (DevBoard Tests)")
 
+    # The sweeps that rebrand upstream's data: their end state is the store's
+    # own domain on every buy button. The secure-boot sweep is judged by the
+    # zero-traces scan alone -- the sentence upstream once wrote is gone from
+    # their tree entirely, and the sweep is deliberately quiet when it is.
+    if f"const SHOP = '{SITE}';" not in catalog:
+        problems.append(f"devices.ts: the shop constant does not point at {SITE}")
+
+    # The probe client is this fork's own file, so nothing rewrites it --
+    # but its constants are the ones a hardware flash lives or dies on, and
+    # a hand edit that loses one would only be noticed at the bench.
+    probe = (ROOT / "src" / "lib" / "bitzy" / "stlink.ts")
+    probe_text = probe.read_text() if probe.is_file() else ""
+    for needle, what in (
+        ("const CR_LOCK = 0x80;", "the F1 FLASH_CR lock bit, not the F4's bit 31"),
+        ("const LOADER_ADDR = 0x20000000;", "where the flash loader loads"),
+        ("const F103_LOADER = new Uint8Array([", "the Thumb flash loader itself"),
+        ("export async function flashBluePillSwd(", "the SWD flash entry point"),
+    ):
+        if needle not in probe_text:
+            problems.append(f"src/lib/bitzy/stlink.ts: {needle!r} missing ({what})")
+
     # The picker's tiles come from this table, so a device left out of it is
     # unreachable no matter what devices.ts claims.
     try:
@@ -3764,6 +3978,17 @@ def validate() -> None:
         "t('status.flashingFailed', 'Flashing failed')",
         "t('status.loggingError', 'Serial logging failed')",
         "font-doto text-3xl font-bold",
+        '<span className="font-doto">{lead}</span>',
+        # The Continue button answers the press, and the serial monitor's
+        # teardown clears its refs before awaiting what cancellation
+        # rejects -- the two places a regression reads as a broken flow
+        # rather than as a broken brand.
+        "Ready To Flash",
+        "setContinueReady(false)",
+        ".replace(/\\.$/, '')",
+        "Cancelling the reader rejects the pipe",
+        "retire whatever the last session",
+        "port.close().catch(() => undefined)",
     ):
         if needle not in hero:
             problems.append(f"LandingHero.tsx: {needle!r} missing (DevBoard flow)")
@@ -3792,6 +4017,10 @@ def validate() -> None:
                         )
         except (OSError, ValueError) as error:
             problems.append(f"public/firmware/{slug}: unreadable manifest ({error})")
+
+    # Every chain's own fingerprint, judged last so it sees the tree exactly
+    # as this run leaves it.
+    problems.extend(_chain_audit_problems())
 
     if problems:
         raise PatchError("overlay validation failed:\n  - " + "\n  - ".join(problems))
