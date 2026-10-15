@@ -10,7 +10,7 @@ const SITE_LINKS = [
 function Notice({ title, body, onClose }: { title: string; body: string; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="relative w-full max-w-md rounded-xl border border-[var(--color-hairline-light)] bg-white p-6 text-[var(--color-ink)]">
+      <div className="relative w-full max-w-md rounded-xl border border-[var(--color-hairline-light)] bg-[var(--color-panel)] p-6 text-[var(--color-ink)]">
         <button
           onClick={onClose}
           aria-label="Close"
@@ -47,7 +47,7 @@ export default function Footer() {
         />
       )}
 
-      <footer className="mt-8 w-full border-t border-[var(--color-hairline-light)] bg-white text-[var(--color-ink)]">
+      <footer className="mt-8 w-full border-t border-[var(--color-hairline-light)] bg-[var(--color-panel)] text-[var(--color-ink)]">
         <div className="mx-auto grid w-full max-w-screen-xl gap-10 px-4 py-12 md:grid-cols-2 lg:px-6">
           <div>
             <div className="flex items-center gap-2.5">

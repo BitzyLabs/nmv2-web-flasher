@@ -46,7 +46,7 @@ function FeatureCard({
   description: string;
 }) {
   return (
-    <div className="rounded-xl border border-[var(--color-hairline-light)] bg-white p-3">
+    <div className="rounded-xl border border-[var(--color-hairline-light)] bg-[var(--color-panel)] p-3">
       <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-bitzy)] text-[var(--color-gold-ink)]">
         {icon}
       </div>

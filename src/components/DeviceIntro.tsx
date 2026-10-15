@@ -82,7 +82,7 @@ export default function DeviceIntro({
           {intro.points.map((point, index) => (
             <div
               key={point.title}
-              className="rounded-xl border border-[var(--color-hairline-light)] bg-white p-5"
+              className="rounded-xl border border-[var(--color-hairline-light)] bg-[var(--color-panel)] p-5"
             >
               <span className="font-data text-[11px] text-[var(--color-gold-deep)]">
                 {String(index + 1).padStart(2, '0')}

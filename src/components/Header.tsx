@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import ThemeSwitch from './bitzy/ThemeSwitch';
 
 const basePath = '';
 
@@ -25,11 +26,18 @@ export default function Header({ onTogglePanel, panelOpen }: HeaderProps) {
           href="https://flasher.bitzylabs.com"
           className="flex flex-1 items-center gap-3 transition-opacity hover:opacity-80"
         >
-          {/* The bar is the store's white blur, so the wordmark is the ink one */}
+          {/* The bar follows the reader's theme, so the wordmark does
+              too: the ink one on light, the light one on dark */}
           <img
             src={`${basePath}/pictures/bitzylabs-logo-light.png`}
             alt="Bitzy Labs"
-            className="h-8 w-auto object-contain"
+            className="h-8 w-auto object-contain dark:hidden"
+          />
+          <img
+            src={`${basePath}/pictures/bitzylabs-logo-dark.png`}
+            alt=""
+            aria-hidden="true"
+            className="hidden h-8 w-auto object-contain dark:block"
           />
           <span className="brand-badge">Flasher</span>
         </a>
@@ -56,6 +64,7 @@ export default function Header({ onTogglePanel, panelOpen }: HeaderProps) {
         </nav>
 
         <div className="flex flex-1 items-center justify-end gap-4 sm:gap-5">
+          <ThemeSwitch />
           <button
             onClick={onTogglePanel}
             aria-expanded={panelOpen}

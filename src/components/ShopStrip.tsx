@@ -12,7 +12,7 @@ export default function ShopStrip() {
       href="https://www.bitzylabs.com"
       target="_blank"
       rel="noopener noreferrer"
-      className="group flex w-full items-center justify-center gap-2 border-[2px] border-[var(--color-bitzy)] bg-white px-6 py-5 text-center text-[var(--color-bitzy)] transition-opacity hover:opacity-90"
+      className="group flex w-full items-center justify-center gap-2 border-[2px] border-[var(--color-bitzy)] bg-[var(--color-panel)] px-6 py-5 text-center text-[var(--color-bitzy)] transition-opacity hover:opacity-90"
     >
       <span className="font-data text-[11px] uppercase tracking-wider opacity-70">
         Rather not build one

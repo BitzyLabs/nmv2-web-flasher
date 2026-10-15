@@ -43,8 +43,8 @@ export default function DeviceModal({ isOpen, onClose, selectDevice }: DeviceMod
           isOpen ? 'scale-100 opacity-100' : 'pointer-events-none scale-95 opacity-0'
         }`}
       >
-        <div className="h-fit w-full max-w-4xl overflow-hidden rounded-2xl border border-[var(--color-hairline-light)] bg-white shadow-2xl">
-          <div className="sticky top-0 z-10 flex items-start justify-between border-b border-[var(--color-hairline-light)] bg-white px-6 py-5">
+        <div className="h-fit w-full max-w-4xl overflow-hidden rounded-2xl border border-[var(--color-hairline-light)] bg-[var(--color-panel)] shadow-2xl">
+          <div className="sticky top-0 z-10 flex items-start justify-between border-b border-[var(--color-hairline-light)] bg-[var(--color-panel)] px-6 py-5">
             <div>
               <p className="brand-kicker">Step 1</p>
               <h2 className="font-display text-xl font-bold tracking-tight text-[var(--color-ink)]">
@@ -75,7 +75,7 @@ export default function DeviceModal({ isOpen, onClose, selectDevice }: DeviceMod
                     <button
                       key={source.device}
                       onClick={() => selectDevice(source.device)}
-                      className="group flex flex-col items-center rounded-xl border border-[var(--color-hairline-light)] bg-white p-3 text-center transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--color-bitzy)] hover:bg-[var(--color-band-light)]"
+                      className="group flex flex-col items-center rounded-xl border border-[var(--color-hairline-light)] bg-[var(--color-panel)] p-3 text-center transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--color-bitzy)] hover:bg-[var(--color-band-light)]"
                     >
                       <img
                         src={`${basePath}/${picture}`}

@@ -439,10 +439,22 @@ def patch_header() -> None:
         "{/* The Bitzy Labs + FLASHER lockup */}",
     )
     # The bar's own comment, which upstream ships in the same words we do.
+    # Three forms: upstream's dark-bar line, this fork's white-bar line,
+    # and the line the theme pair carries. The migration has to run first,
+    # because the chain after it is a required one -- it recognises a
+    # finished run by finding its own replacement, which is the line the
+    # migration leaves behind.
+    changed |= replace_if_present(
+        path,
+        "{/* The bar is the store's white blur, so the wordmark is the ink one */}",
+        "{/* The bar follows the reader's theme, so the wordmark does\n"
+        "              too: the ink one on light, the light one on dark */}",
+    )
     changed |= replace_once(
         path,
         "{/* The bar is always dark, so the wordmark is always the light one */}",
-        "{/* The bar is the store's white blur, so the wordmark is the ink one */}",
+        "{/* The bar follows the reader's theme, so the wordmark does\n"
+        "              too: the ink one on light, the light one on dark */}",
     )
     # The nav itself: the reader wants both links bigger and both *in the
     # middle* of the bar, so the instructions button moves out of the
@@ -1084,7 +1096,35 @@ def patch_layout() -> None:
         f"  title: '{BRAND} Flasher',\n",
         f"  themeColor: '{CRIMSON}',\n  title: '{BRAND} Flasher',\n",
     )
-    note(changed, "layout.tsx: page title, description, theme-color")
+    # The theme provider wraps the app, and upstream's layout never had it
+    # -- a fresh sync brings the wrapper and its import back gone, so both
+    # land again here. The import first, then the wrapper: the markers are
+    # distinct enough that either order would do, and this is how they
+    # read.
+    changed |= inject_once(
+        path,
+        "components/ClientThemeWrapper",
+        "import './globals.css';\n",
+        "import './globals.css';\n"
+        "import { ClientThemeWrapper } from '../components/ClientThemeWrapper';\n",
+    )
+    changed |= inject_once(
+        path,
+        "<ClientThemeWrapper>",
+        "        <I18nProvider>\n"
+        '          <div className="min-h-screen text-foreground">\n'
+        '            <main className="w-full p-4">{children}</main>\n'
+        "          </div>\n"
+        "        </I18nProvider>\n",
+        "        <ClientThemeWrapper>\n"
+        "          <I18nProvider>\n"
+        '            <div className="min-h-screen text-foreground">\n'
+        '              <main className="w-full p-4">{children}</main>\n'
+        "            </div>\n"
+        "          </I18nProvider>\n"
+        "        </ClientThemeWrapper>\n",
+    )
+    note(changed, "layout.tsx: page title, description, theme-color, theme provider")
 
 
 def patch_palette() -> None:
@@ -1161,10 +1201,10 @@ def patch_palette() -> None:
         "  --color-muted-ink: #8A8A8F;\n"
         f"  --color-muted-warm: {STORE_MUTED};   /* muted text on a light surface */\n",
     )
-    # The CTA buttons. forcedTheme=dark means the .dark block is the one
-    # that ships, so this is where "primary" becomes the store's crimson
+    # The CTA buttons: this is where "primary" becomes the store's crimson
     # with white on it, and the focus ring takes the same hue -- the store
-    # outlines focus in crimson too. Exact percentages (348 83.33% 47.06%
+    # outlines focus in crimson too. Both blocks carry the pair, light
+    # reader and dark. Exact percentages (348 83.33% 47.06%
     # is #DC143C to the pixel): rounded to whole percents the value lands
     # a shade off, and the swatch and the button end up disagreeing. Two
     # forms: upstream's white, and this fork's first rounded crimson.
@@ -1188,15 +1228,16 @@ def patch_palette() -> None:
         "    --ring: 212.7 26.8% 83.9%;",
         "    --ring: 348 83.33% 47.06%;",
     )
-    # The rest of that block still speaks in upstream's dark scheme, and
-    # forcedTheme=dark puts its class on <html>, so this is where the
-    # light half of the store's palette has to be said: white where the
-    # shadcn surfaces sit (the select's trigger, its list, a card), the
-    # store's ink for text on them, the store's line for borders, the
-    # store's muted for anything quiet. One line per token, upstream's
-    # dark value as the anchor -- a value that appears twice or not at
-    # all raises here, and a fresh sync brings the dark form straight
-    # back for this to catch again.
+    # The rest of that block still speaks in upstream's dark scheme, so
+    # this is where the light half of the store's palette has to be said:
+    # white where the shadcn surfaces sit (the select's trigger, its list,
+    # a card), the store's ink for text on them, the store's line for
+    # borders, the store's muted for anything quiet. These same values
+    # are what patch_theme_schemes lands in :root afterwards -- here they
+    # dress the block it then trades for the real dark scheme. One line
+    # per token, upstream's dark value as the anchor -- a value that
+    # appears twice or not at all raises here, and a fresh sync brings
+    # the dark form straight back for this to catch again.
     for old, new in (
         ("    --background: 0 84% 4.9%;", "    --background: 0 0% 100%;"),
         ("    --foreground: 210 40% 98%;", "    --foreground: 0 0% 13.33%;"),
@@ -1281,23 +1322,213 @@ def patch_palette() -> None:
     note(changed, "globals.css: Doto face served from the repo, .font-doto class")
 
 
+def patch_theme_schemes() -> None:
+    """The page grows a real second scheme, and the first stays default.
+
+    Upstream forced one dark theme onto <html>; the reader now picks
+    light, dark or system, and next-themes expresses that as a class. So
+    the two shadcn blocks have to mean what they say again: :root carries
+    the store's light scheme -- the default, and the exact bytes the
+    forced build used to render, so the light page does not move by a
+    pixel -- and .dark carries a warm dark one built from the same
+    family: warm near-black ground, panels lifted one step off it, warm
+    off-white text, crimson unchanged.
+
+    Two orderings matter. This function runs straight after the palette,
+    because the anchor for the .dark trade is the block the palette has
+    just dressed in the store's light values: on a fresh sync that pass
+    produces the anchor and this one consumes it, in the same run. And
+    every replacement the palette's own chains write must still be
+    findable afterwards or a re-run raises on a marker it expects to
+    land -- they all now live in :root, which is the loop above.
+
+    The brand tokens flip inside the same .dark block: their names keep
+    their light-theme meaning (the @theme block defines them there), and
+    this block lives in @layer base, which wins over the theme layer --
+    so every component reading a var follows the html class with no
+    change of its own. The three tokens nothing spells itself (panel,
+    bar, hero lift) are injected into @theme first, because the dark
+    block below names them and would satisfy the marker before the
+    injection had run.
+    """
+    path = ROOT / "src" / "app" / "globals.css"
+    changed = False
+
+    # :root takes the store's light scheme, value by value against
+    # upstream's light defaults -- the same discipline as the palette's
+    # own loop: a value that appears twice or not at all raises here, and
+    # a fresh sync brings upstream's form straight back to be caught.
+    for old, new in (
+        ("    --foreground: 222.2 84% 4.9%;", "    --foreground: 0 0% 13.33%;"),
+        ("    --card-foreground: 222.2 84% 4.9%;", "    --card-foreground: 0 0% 13.33%;"),
+        ("    --popover-foreground: 222.2 84% 4.9%;", "    --popover-foreground: 0 0% 13.33%;"),
+        (
+            "    --primary: 222.2 47.4% 11.2%;\n    --primary-foreground: 210 40% 98%;",
+            "    --primary: 348 83.33% 47.06%;\n    --primary-foreground: 0 0% 100%;",
+        ),
+        ("    --secondary: 210 40% 96.1%;", "    --secondary: 40 20% 94%;"),
+        ("    --secondary-foreground: 222.2 47.4% 11.2%;", "    --secondary-foreground: 0 0% 13.33%;"),
+        ("    --muted: 210 40% 96.1%;", "    --muted: 40 14% 90%;"),
+        ("    --muted-foreground: 215.4 16.3% 46.9%;", "    --muted-foreground: 41 4.3% 41%;"),
+        ("    --accent: 210 40% 96.1%;", "    --accent: 40 20% 94%;"),
+        ("    --accent-foreground: 222.2 47.4% 11.2%;", "    --accent-foreground: 0 0% 13.33%;"),
+        ("    --border: 214.3 31.8% 91.4%;", "    --border: 40 15.8% 88.8%;"),
+        ("    --input: 214.3 31.8% 91.4%;", "    --input: 40 15.8% 88.8%;"),
+        ("    --ring: 222.2 84% 4.9%;", "    --ring: 348 83.33% 47.06%;"),
+    ):
+        changed |= replace_once(path, old, new)
+    note(changed, "globals.css: :root -> the store's light scheme (the default)")
+
+    # The three tokens no component spells itself. Before the .dark block
+    # below, whose lines name them and would satisfy this marker early.
+    changed = inject_once(
+        path,
+        "--color-panel",
+        "  --color-hairline-light: #E7E4DE;\n",
+        "  --color-hairline-light: #E7E4DE;\n"
+        "  /* What flips with the reader's theme. The names keep their light\n"
+        "     meaning here; .dark overrides them for the dark half. */\n"
+        "  --color-panel: #FFFFFF;   /* raised surfaces: cards, drawers, pickers */\n"
+        "  --color-bar: rgba(255, 255, 255, 0.85);   /* the fixed bar's ground */\n"
+        "  --color-hero-lift: #FFFFFF;   /* the top of the hero band, off the bar */\n",
+    )
+    note(changed, "globals.css: --color-panel, --color-bar, --color-hero-lift tokens")
+
+    # The .dark block as one piece. Its old bytes are what the palette's
+    # loop leaves behind -- upstream's comments still inside, store light
+    # values under them -- and the trade lands the dark scheme plus the
+    # brand token flips. Every dark value here avoids the anchors
+    # patch_palette keys on (its upstream dark forms), so the two passes
+    # stay idempotent together whichever order a tree meets them in.
+    changed = replace_if_present(path, DARK_BLOCK_LIGHT, DARK_BLOCK_DARK)
+    note(changed, "globals.css: .dark -> the warm dark scheme, brand tokens flipped")
+
+
+# The .dark block as the palette leaves it -- upstream's comments, the
+# store's light values -- and what it becomes: the dark half of the same
+# house. Kept as constants so the trade has one definition of each.
+DARK_BLOCK_LIGHT = (
+    "  .dark {\n"
+    "    /* --background: 222.2 84% 4.9%; */\n"
+    "    --background: 0 0% 100%;\n"
+    "    --foreground: 0 0% 13.33%;\n"
+    "\n"
+    "    /* --card: 222.2 84% 4.9%; */\n"
+    "    --card: 0 0% 100%;\n"
+    "    --card-foreground: 0 0% 13.33%;\n"
+    "\n"
+    "    /* --popover: 222.2 84% 4.9%; */\n"
+    "    --popover: 0 0% 100%;\n"
+    "    --popover-foreground: 0 0% 13.33%;\n"
+    "\n"
+    "    --primary: 348 83.33% 47.06%;\n"
+    "    --primary-foreground: 0 0% 100%;\n"
+    "\n"
+    "    --secondary: 40 20% 94%;\n"
+    "    --secondary-foreground: 0 0% 13.33%;\n"
+    "\n"
+    "    --muted: 40 14% 90%;\n"
+    "    --muted-foreground: 41 4.3% 41%;\n"
+    "\n"
+    "    --accent: 40 20% 94%;\n"
+    "    --accent-foreground: 0 0% 13.33%;\n"
+    "\n"
+    "    --destructive: 0 84.2% 60.2%;\n"
+    "    --destructive-foreground: 210 40% 98%;\n"
+    "\n"
+    "    --border: 40 15.8% 88.8%;\n"
+    "    --input: 40 15.8% 88.8%;\n"
+    "    --ring: 348 83.33% 47.06%;\n"
+    "  }"
+)
+DARK_BLOCK_DARK = (
+    "  .dark {\n"
+    "    /* Bitzy's dark half: the same house one step down. The ground\n"
+    "       goes warm near-black, panels lift a step off it, text warms to\n"
+    "       off-white, crimson does not move. The brand tokens flip with\n"
+    "       the shadcn ones -- their names keep their light meaning (the\n"
+    "       @theme block defines them there; this block lives in @layer\n"
+    "       base, which wins) -- so a component reading a var follows the\n"
+    "       class on <html> with no change of its own. The terminal keeps\n"
+    "       its black; it always did, theme or no theme. */\n"
+    "    --background: 40 12% 9.8%;\n"
+    "    --foreground: 42 26.3% 92.5%;\n"
+    "\n"
+    "    --card: 37.5 12.5% 12.5%;\n"
+    "    --card-foreground: 42 26.3% 92.5%;\n"
+    "\n"
+    "    --popover: 37.5 12.5% 12.5%;\n"
+    "    --popover-foreground: 42 26.3% 92.5%;\n"
+    "\n"
+    "    --primary: 348 83.33% 47.06%;\n"
+    "    --primary-foreground: 0 0% 100%;\n"
+    "\n"
+    "    --secondary: 40 10.8% 16.3%;\n"
+    "    --secondary-foreground: 42 26.3% 92.5%;\n"
+    "\n"
+    "    --muted: 37.5 14.3% 11%;\n"
+    "    --muted-foreground: 41 9.6% 61.4%;\n"
+    "\n"
+    "    --accent: 40 10.8% 16.3%;\n"
+    "    --accent-foreground: 42 26.3% 92.5%;\n"
+    "\n"
+    "    --destructive: 0 84.2% 60.2%;\n"
+    "    --destructive-foreground: 210 40% 98%;\n"
+    "\n"
+    "    --border: 40 11.5% 20.4%;\n"
+    "    --input: 40 11.5% 20.4%;\n"
+    "    --ring: 348 83.33% 47.06%;\n"
+    "\n"
+    "    --color-ink: #F1EEE7;\n"
+    "    --color-muted-warm: #A6A093;\n"
+    "    --color-hairline-light: #3A362E;\n"
+    "    --color-band-light: #1C1A16;\n"
+    "    --color-panel: #24211C;\n"
+    "    --color-bar: rgba(36, 33, 28, 0.85);\n"
+    "    --color-hero-lift: #2B2823;\n"
+    "  }"
+)
+
+
 # The flasher's band, kept as its own constant: patch_chrome trades an
 # already-injected tree's dark version for this one by anchoring on the
 # old text, and the injection below needs the same bytes -- one definition
 # for both, so they cannot drift.
 HERO_CSS = (
     "/* The flasher's own band: the store's ground under the store's glow,\n"
+    "   our mark tiled at the page's 512px cell, and a lift off the bar at\n"
+    "   the top so the band separates from the fixed bar without going\n"
+    "   dark -- the tool room turned into another room of the house. The\n"
+    "   glow drifts on a slow loop; the reduce block below stops it. */\n"
+    ".bitzy-hero {\n"
+    "  background-color: var(--color-band-light);\n"
+    "  background-image:\n"
+    "    url('/pictures/logo-tile.svg'),\n"
+    "    radial-gradient(900px 480px at 85% -20%, rgba(220, 20, 60, 0.10), transparent 60%),\n"
+    "    radial-gradient(760px 520px at -12% 115%, rgba(220, 20, 60, 0.06), transparent 55%),\n"
+    "    linear-gradient(180deg, var(--color-hero-lift) 0%, var(--color-band-light) 62%, var(--color-band-light) 100%);\n"
+    "  background-repeat: repeat, no-repeat, no-repeat, no-repeat;\n"
+    "  background-size: 512px auto, auto, auto, auto;\n"
+    "  animation: bitzy-glow 14s ease-in-out infinite alternate;\n"
+    "}\n"
+)
+
+# What HERO_CSS shipped as before the reader's theme could flip it: the
+# same band with the two colours spelled out. Named only so patch_chrome
+# can trade a tree that still wears it.
+HERO_CSS_LITERALS = (
+    "/* The flasher's own band: the store's ground under the store's glow,\n"
     "   our mark tiled at the page's 512px cell, and a lift off white at\n"
     "   the top so the band separates from the fixed bar without going\n"
     "   dark -- the tool room turned into another room of the house. The\n"
     "   glow drifts on a slow loop; the reduce block below stops it. */\n"
     ".bitzy-hero {\n"
-    f"  background-color: {STORE_BG};\n"
+    "  background-color: #F7F6F3;\n"
     "  background-image:\n"
     "    url('/pictures/logo-tile.svg'),\n"
     "    radial-gradient(900px 480px at 85% -20%, rgba(220, 20, 60, 0.10), transparent 60%),\n"
     "    radial-gradient(760px 520px at -12% 115%, rgba(220, 20, 60, 0.06), transparent 55%),\n"
-    f"    linear-gradient(180deg, #ffffff 0%, {STORE_BG} 62%, {STORE_BG} 100%);\n"
+    "    linear-gradient(180deg, #ffffff 0%, #F7F6F3 62%, #F7F6F3 100%);\n"
     "  background-repeat: repeat, no-repeat, no-repeat, no-repeat;\n"
     "  background-size: 512px auto, auto, auto, auto;\n"
     "  animation: bitzy-glow 14s ease-in-out infinite alternate;\n"
@@ -1332,6 +1563,83 @@ OLD_HERO_CSS = (
 # edge, and a crimson wash under the cursor -- kept !important for the same
 # reason upstream used it.
 SELECT_LIGHT_CSS = (
+    "/* Custom selector styling - more specific: the pins follow the\n"
+    "   reader's theme. Radix ships its own dark list that beats the\n"
+    "   tokens, so the trigger and its parts keep the !important -- the\n"
+    "   panel the theme is showing (white under light, the warm dark\n"
+    "   panel under dark), ink text either way, the hairline edge, and\n"
+    "   crimson washing the row under the cursor (the chips keep their\n"
+    "   solid crimson, not the rows). */\n"
+    "[data-radix-select-trigger],\n"
+    'button[data-radix-select-trigger],\n'
+    'button[role="combobox"] {\n'
+    "  background-color: var(--color-panel) !important;\n"
+    "  color: var(--color-ink) !important;\n"
+    "  border: 1px solid var(--color-hairline-light) !important;\n"
+    "}\n"
+    "\n"
+    "[data-radix-select-content],\n"
+    "div[data-radix-select-content],\n"
+    "[data-radix-popper-content-wrapper] > div,\n"
+    "div[data-radix-popper-content-wrapper] {\n"
+    "  background-color: var(--color-panel) !important;\n"
+    "  color: var(--color-ink) !important;\n"
+    "  border: 1px solid var(--color-hairline-light) !important;\n"
+    "  box-shadow: 0 10px 38px -10px rgba(0, 0, 0, 0.35), "
+    "0 10px 20px -15px rgba(0, 0, 0, 0.2) !important;\n"
+    "}\n"
+    "\n"
+    "[data-radix-select-item],\n"
+    "div[data-radix-select-item],\n"
+    '[role="option"] {\n'
+    "  background-color: var(--color-panel) !important;\n"
+    "  color: var(--color-ink) !important;\n"
+    "  padding: 8px 12px !important;\n"
+    "}\n"
+    "\n"
+    "[data-radix-select-item]:hover,\n"
+    "[data-radix-select-item]:focus,\n"
+    "div[data-radix-select-item]:hover,\n"
+    "div[data-radix-select-item]:focus,\n"
+    '[role="option"]:hover,\n'
+    '[role="option"]:focus {\n'
+    "  background-color: rgba(220, 20, 60, 0.08) !important;\n"
+    "  outline: none !important;\n"
+    "}\n"
+    "\n"
+    "[data-radix-select-item][data-highlighted],\n"
+    "div[data-radix-select-item][data-highlighted],\n"
+    '[role="option"][data-highlighted] {\n'
+    "  background-color: rgba(220, 20, 60, 0.08) !important;\n"
+    "}\n"
+    "\n"
+    "/* Radix Select viewport and scrollarea */\n"
+    "[data-radix-select-viewport] {\n"
+    "  background-color: var(--color-panel) !important;\n"
+    "}\n"
+    "\n"
+    "[data-radix-scroll-area-viewport] {\n"
+    "  background-color: var(--color-panel) !important;\n"
+    "}\n"
+    "\n"
+    "/* Fallback with higher specificity */\n"
+    ".select-content,\n"
+    'div[class*="select"] {\n'
+    "  background-color: var(--color-panel) !important;\n"
+    "  color: var(--color-ink) !important;\n"
+    "}\n"
+    "\n"
+    ".select-item,\n"
+    'div[class*="select"] > div {\n'
+    "  background-color: var(--color-panel) !important;\n"
+    "  color: var(--color-ink) !important;\n"
+    "}\n"
+)
+
+# What the pins shipped as before the reader's theme could flip them: the
+# same block with the three colours spelled out. Named only so
+# patch_chrome can trade a tree that still wears it.
+OLD_LIGHT_SELECT_CSS = (
     "/* Custom selector styling - more specific: the store's light scheme.\n"
     "   Radix ships its own dark list that beats the tokens, so the trigger\n"
     "   and its parts keep the !important -- white cards on the warm band,\n"
@@ -1491,7 +1799,7 @@ CANVAS_CSS = (
     "   canvas here -- the same element the old JS gradient used to paint,\n"
     "   now painted once and for good. */\n"
     "body {\n"
-    f"  background-color: {STORE_BG};\n"
+    "  background-color: var(--color-band-light);\n"
     "  background-image:\n"
     "    url('/pictures/logo-tile.svg'),\n"
     "    radial-gradient(800px 420px at 88% -10%, rgba(220, 20, 60, 0.10), transparent 60%),\n"
@@ -1628,10 +1936,11 @@ def patch_chrome() -> None:
     """The store's header, and everything the palette alone cannot say.
 
     globals.css carries three things this pass needs beyond token values:
-    the header rule (its own surface -- now the store's white at 85% over a
-    14px blur), the canvas the JS gradient used to paint, and the motion.
-    All three anchor on text upstream actually ships, so a fresh sync grows
-    them back the moment the patcher runs.
+    the header rule (its own surface -- the bar token now: white at 85%
+    over a 14px blur under the light scheme, the warm panel under dark),
+    the canvas the JS gradient used to paint, and the motion. All three
+    anchor on text upstream actually ships, so a fresh sync grows them
+    back the moment the patcher runs.
     """
     path = ROOT / "src" / "app" / "globals.css"
 
@@ -1643,11 +1952,14 @@ def patch_chrome() -> None:
     # Chrome -- every Chrome this page is aimed at, Web Serial being
     # Chromium's -- reads neither that alias nor a declaration it has
     # folded away. Each @supports names the form it guards, so neither
-    # can be merged out. Two source forms: upstream's dark rule, and this
-    # fork's first white rule with the blur inside it.
+    # can be merged out. Three source forms: upstream's dark rule, this
+    # fork's first white rule with the blur inside it, and this fork's
+    # white rule with the blur in the @supports blocks -- and the ground
+    # is a token in all of them now, white at 85% under the light scheme
+    # and the warm panel under dark.
     final_header = (
         ".header-custom {\n"
-        "  background-color: rgba(255, 255, 255, 0.85);\n"
+        "  background-color: var(--color-bar);\n"
         "  border-bottom: 1px solid var(--color-hairline-light);\n"
         "  width: 100vw;\n"
         "  position: fixed;\n"
@@ -1702,6 +2014,25 @@ def patch_chrome() -> None:
         "}\n",
         final_header,
     )
+    # The third form: this fork's white rule with the blur already out in
+    # the @supports blocks -- what a patched tree wears today. Runs after
+    # the two above, which are quiet on it (their anchors are gone), and
+    # lands the bar token.
+    changed |= replace_if_present(
+        path,
+        ".header-custom {\n"
+        "  background-color: rgba(255, 255, 255, 0.85);\n"
+        "  border-bottom: 1px solid var(--color-hairline-light);\n"
+        "  width: 100vw;\n"
+        "  position: fixed;\n"
+        "  top: 0;\n"
+        "  left: 0;\n"
+        "  right: 0;\n"
+        "  z-index: 50;\n"
+        "  color: var(--color-ink);\n"
+        "}\n",
+        final_header,
+    )
 
     # Canvas + motion, after upstream's last rule (.band-dark).
     changed |= inject_once(
@@ -1723,13 +2054,43 @@ def patch_chrome() -> None:
         "  background-size: 256px auto, auto, auto, auto;\n",
         "  background-size: 512px auto, auto, auto, auto;\n",
     )
+    # The canvas ground itself: it spelled the band's colour out, and the
+    # band token is what follows the reader's theme. inject_once only
+    # writes CANVAS_CSS into a fresh tree, so an already-injected tree
+    # trades the line here.
+    changed |= replace_if_present(
+        path,
+        "body {\n  background-color: #F7F6F3;\n  background-image:",
+        "body {\n  background-color: var(--color-band-light);\n  background-image:",
+    )
     # The band itself moved from the flasher's dark room to the store's
     # light ground; inject_once only writes CANVAS_CSS into a fresh tree,
     # so an already-injected tree trades the whole rule here.
     changed |= replace_if_present(path, OLD_HERO_CSS, HERO_CSS)
+    # ...and from the light ground spelled out to the theme's tokens, the
+    # same way: a tree that wears the literal form trades it after the
+    # chain above, which is quiet on it.
+    changed |= replace_if_present(path, HERO_CSS_LITERALS, HERO_CSS)
     # The select's !important pins are upstream's, so this chain is the
     # only thing that can move them: tokens cannot beat !important.
     changed |= replace_if_present(path, OLD_SELECT_CSS, SELECT_LIGHT_CSS)
+    # ...and the pins this fork already moved to the light scheme trade
+    # the same way, from spelled-out colours to the three tokens.
+    changed |= replace_if_present(path, OLD_LIGHT_SELECT_CSS, SELECT_LIGHT_CSS)
+    # The select's scrollbar rode the light scheme too, and on the dark
+    # panel's dropdown a light track reads as a bright stripe. The track
+    # takes the hairline token; the thumb's mid grey sits on either
+    # ground, so it stays.
+    changed |= replace_if_present(
+        path,
+        "  scrollbar-color: #9CA3AF #E5E7EB;\n",
+        "  scrollbar-color: #9CA3AF var(--color-hairline-light);\n",
+    )
+    changed |= replace_if_present(
+        path,
+        "  background: #E5E7EB;\n",
+        "  background: var(--color-hairline-light);\n",
+    )
     note(changed, "globals.css: store header bar, warm canvas + logo tile, motion")
 
 
@@ -2952,8 +3313,8 @@ def patch_hero_light() -> None:
         f'<p className="font-data mt-1.5 break-all text-center text-[10px] {ink}/40">',
     )
     # The two checkboxes and their labels: dark: variants only exist to
-    # serve the dark band, and forcedTheme=dark would otherwise keep them
-    # on even with the band light.
+    # serve the dark band, and the themed tokens do that job now -- the
+    # ink and the crimson follow the reader's choice on their own.
     changed |= replace_everywhere(
         path,
         'className="w-4 h-4 accent-bitzy bg-gray-100 border-gray-300 rounded '
@@ -3129,6 +3490,82 @@ def patch_devboard_panel() -> None:
     if changed:
         path.write_text(PANEL_SOURCE)
     note(changed, "DevBoardPanel.tsx: one Blue Pill connection line, no panels")
+
+
+def patch_theme_ui() -> None:
+    """The bar learns the switcher, and every white panel picks a theme.
+
+    Three pieces live on the bar: the import for the switcher, the
+    switcher itself in the right-hand controls (it reads before the
+    mobile Instructions button so the order matches desktop), and the
+    wordmark pair -- the ink one under the light scheme, the light one
+    under dark, both shipped, each hidden on the other's half.
+
+    Then every surface that spelled its white with `bg-white`: that is
+    the one spelling no CSS variable can flip, so each is carried to
+    bg-[var(--color-panel)] -- white where the light scheme stands, the
+    warm dark panel where it does not. The picker tiles, the two modals,
+    the device intro, the feature cards, the footer, the drawer, the AP
+    input and the status card, the shop strip: all one string, one pass
+    per file. BoardArt keeps its white-alpha placeholder on purpose --
+    it sits on the dark art frame either way -- and Releases is pruned,
+    so neither is in the list.
+    """
+    header = ROOT / "src" / "components" / "Header.tsx"
+    changed = inject_once(
+        header,
+        "./bitzy/ThemeSwitch",
+        "import { useTranslation } from 'react-i18next';\n",
+        "import { useTranslation } from 'react-i18next';\n"
+        "import ThemeSwitch from './bitzy/ThemeSwitch';\n",
+    )
+    # Before the mobile Instructions trigger: the switcher is the reader's
+    # first control, and on desktop this is the right-hand rail either way.
+    changed |= inject_once(
+        header,
+        "<ThemeSwitch />",
+        '        <div className="flex flex-1 items-center justify-end gap-4 sm:gap-5">\n',
+        '        <div className="flex flex-1 items-center justify-end gap-4 sm:gap-5">\n'
+        "          <ThemeSwitch />\n",
+    )
+    # The wordmark pair. One img traded for two: the light file keeps the
+    # bar's light half (it is the ink one), the dark file carries the
+    # white one, and the dark: utilities -- the custom variant the theme
+    # class drives -- choose between them.
+    changed |= replace_if_present(
+        header,
+        "          <img\n"
+        "            src={`${basePath}/pictures/bitzylabs-logo-light.png`}\n"
+        f'            alt="{BRAND}"\n'
+        '            className="h-8 w-auto object-contain"\n'
+        "          />\n",
+        "          <img\n"
+        "            src={`${basePath}/pictures/bitzylabs-logo-light.png`}\n"
+        f'            alt="{BRAND}"\n'
+        '            className="h-8 w-auto object-contain dark:hidden"\n'
+        "          />\n"
+        "          <img\n"
+        f"            src={{`${{basePath}}/pictures/{LOGO_DARK}`}}\n"
+        '            alt=""\n'
+        '            aria-hidden="true"\n'
+        '            className="hidden h-8 w-auto object-contain dark:block"\n'
+        "          />\n",
+    )
+    note(changed, "Header.tsx: theme switcher imported and rendered, wordmark per theme")
+
+    changed = False
+    for path in (
+        ROOT / "src" / "components" / "BoardPicker.tsx",
+        ROOT / "src" / "components" / "DeviceModal.tsx",
+        ROOT / "src" / "components" / "DeviceIntro.tsx",
+        ROOT / "src" / "components" / "Features.tsx",
+        ROOT / "src" / "components" / "Footer.tsx",
+        ROOT / "src" / "components" / "InstructionPanel.tsx",
+        ROOT / "src" / "components" / "LandingHero.tsx",
+        ROOT / "src" / "components" / "ShopStrip.tsx",
+    ):
+        changed |= replace_everywhere(path, "bg-white", "bg-[var(--color-panel)]")
+    note(changed, "components: bg-white -> --color-panel, which follows the reader's theme")
 
 
 def prune_dead_assets() -> None:
@@ -3537,15 +3974,20 @@ def validate() -> None:
         (f"--color-chrome: {STORE_INK};", "the dark chrome on the store's ink"),
         ("--primary: 348 83.33% 47.06%;", "the crimson CTA, exact"),
         ("    --ring: 348 83.33% 47.06%;", "the crimson focus ring, exact"),
-        ("background-color: rgba(255, 255, 255, 0.85)", "the store's white header"),
+        ("background-color: var(--color-bar)", "the bar's ground, which follows the theme"),
         ("backdrop-filter: blur(14px)", "the header's blur"),
         (".bitzy-hero {", "the flasher's own light band"),
         (
-            f"linear-gradient(180deg, #ffffff 0%, {STORE_BG} 62%, {STORE_BG} 100%)",
-            "the band lifting off white into the ground",
+            "linear-gradient(180deg, var(--color-hero-lift) 0%, var(--color-band-light) 62%, var(--color-band-light) 100%)",
+            "the band lifting off the bar into the ground, both themed",
         ),
-        ("background-color: #ffffff !important;", "the select's white pins"),
-        ("border: 1px solid #E7E4DE !important;", "the select's hairline pin"),
+        ("background-color: var(--color-panel) !important;", "the select's pins follow the theme"),
+        ("border: 1px solid var(--color-hairline-light) !important;", "the select's hairline pin"),
+        ("scrollbar-color: #9CA3AF var(--color-hairline-light);", "the select's scrollbar track"),
+        ("body {\n  background-color: var(--color-band-light);", "the canvas ground follows the theme"),
+        ("--color-panel: #FFFFFF;", "the light panel every white card reads"),
+        ("--color-bar: rgba(255, 255, 255, 0.85);", "the bar's translucent light ground"),
+        ("--color-hero-lift: #FFFFFF;", "the band's lift off the bar, light side"),
         ("rgba(220, 20, 60, 0.08)", "the select's crimson row wash"),
         ("url('/pictures/logo-tile.svg')", "the mark tiled on the warm ground"),
         (
@@ -3576,28 +4018,130 @@ def validate() -> None:
     # ships, and the exact one must not contain the rounded one as a string.
     if "348 83% 47%" in css:
         problems.append("globals.css: the rounded crimson HSL is still there")
-    # forcedTheme=dark puts this block's values on <html>, so with the whole
-    # site light it is here the light scheme has to be said: the shadcn
-    # surfaces (the select's trigger and list, borders, inherited text) all
-    # read from it, and upstream's dark values ship again on every sync.
-    dark_block = re.search(r"\.dark \{(.*?)\n  \}", css, re.S)
-    if not dark_block:
-        problems.append("globals.css: the .dark block is gone")
-    else:
-        block = dark_block.group(1)
-        for needle, what in (
-            ("--background: 0 0% 100%;", "white shadcn surfaces"),
-            ("--foreground: 0 0% 13.33%;", "ink for inherited text"),
-            ("--popover: 0 0% 100%;", "the select's white list"),
-            ("--border: 40 15.8% 88.8%;", "the store's line as the default border"),
-            ("--muted-foreground: 41 4.3% 41%;", "the store's muted"),
-            ("--primary: 348 83.33% 47.06%;", "the crimson CTA"),
-        ):
+    # The three spellings the theme trade replaces: the bar's ground, the
+    # select's pins, the band's gradient. Their colours survive only as
+    # token definitions now (#ffffff as --color-panel, #F7F6F3 as
+    # --color-band-light), so the raw forms must be gone entirely.
+    for gone, what in (
+        ("background-color: rgba(255, 255, 255, 0.85)", "the bar's ground is a token now"),
+        ("background-color: #ffffff !important;", "the select's pins are tokens now"),
+        ("border: 1px solid #E7E4DE !important;", "the select's border pin is a token now"),
+        ("linear-gradient(180deg, #ffffff", "the band's gradient reads the tokens"),
+    ):
+        if gone in css:
+            problems.append(f"globals.css: {gone!r} is still there ({what})")
+    if css.replace(f"--color-band-light: {STORE_BG};", "").count("#F7F6F3"):
+        problems.append(
+            "globals.css: the band's colour is still spelled out beyond its token"
+        )
+    # Two schemes now, and each block must mean what its selector says:
+    # :root carries the store's light one -- the default the reader lands
+    # on, and the exact bytes the forced-dark build used to render, so
+    # the light page does not move -- and .dark carries the warm dark
+    # one, brand tokens flipped in the same block. A fresh sync dresses
+    # .dark in upstream's dark values again, so both halves are judged on
+    # what they carry and on what they must not.
+    for name, sel, needles, gone in (
+        (
+            ":root",
+            r":root \{(.*?)\n  \}",
+            (
+                ("--background: 0 0% 100%;", "white shadcn surfaces"),
+                ("--foreground: 0 0% 13.33%;", "ink for inherited text"),
+                ("--border: 40 15.8% 88.8%;", "the store's line as the default border"),
+                ("--muted-foreground: 41 4.3% 41%;", "the store's muted"),
+                ("--primary: 348 83.33% 47.06%;", "the crimson CTA"),
+                ("    --ring: 348 83.33% 47.06%;", "the crimson focus ring"),
+            ),
+            ("222.2 47.4% 11.2%", "214.3 31.8% 91.4%", "215.4 16.3% 46.9%"),
+        ),
+        (
+            ".dark",
+            r"\.dark \{(.*?)\n  \}",
+            (
+                ("--background: 40 12% 9.8%;", "the warm near-black ground"),
+                ("--foreground: 42 26.3% 92.5%;", "warm off-white text"),
+                ("--card: 37.5 12.5% 12.5%;", "panels lifted off the ground"),
+                ("--border: 40 11.5% 20.4%;", "the dark half's hairline"),
+                ("--primary: 348 83.33% 47.06%;", "crimson, unchanged in the dark"),
+                ("--color-ink: #F1EEE7;", "the brand ink, flipped"),
+                ("--color-band-light: #1C1A16;", "the brand ground, flipped"),
+                ("--color-panel: #24211C;", "the brand panel, flipped"),
+                ("--color-bar: rgba(36, 33, 28, 0.85);", "the bar's dark ground"),
+            ),
+            ("0 84% 4.9%", "217.2 32.6% 17.5%", "--background: 0 0% 100%;"),
+        ),
+    ):
+        match = re.search(sel, css, re.S)
+        if not match:
+            problems.append(f"globals.css: the {name} block is gone")
+            continue
+        block = match.group(1)
+        for needle, what in needles:
             if needle not in block:
-                problems.append(f"globals.css: .dark {needle!r} missing ({what})")
-        for gone in ("0 84% 4.9%", "217.2 32.6% 17.5%"):
-            if gone in block:
-                problems.append(f"globals.css: .dark still carries upstream's {gone}")
+                problems.append(f"globals.css: {name} {needle!r} missing ({what})")
+        for gone_value in gone:
+            if gone_value in block:
+                problems.append(f"globals.css: {name} still carries {gone_value}")
+
+    # --- Theme modes --------------------------------------------------------
+    # Three states, one default, one storage key: the provider's props are
+    # what make "light" the landing state and "system" a real choice, and
+    # forcedTheme is the hack they replace -- any of them missing and the
+    # blocks above are being fed by a class nobody chose.
+    wrapper = (ROOT / "src" / "components" / "ClientThemeWrapper.tsx").read_text()
+    for needle, what in (
+        ('attribute="class"', "the class next-themes toggles on <html>"),
+        ('defaultTheme="light"', "light is the default the reader lands on"),
+        ("enableSystem", "Auto is a real state, not a label"),
+        ('storageKey="bitzy-theme"', "the reader's choice persists"),
+        ("disableTransitionOnChange", "no flash while the scheme changes"),
+    ):
+        if needle not in wrapper:
+            problems.append(f"ClientThemeWrapper.tsx: {needle!r} missing ({what})")
+    if "forcedTheme" in wrapper:
+        problems.append("ClientThemeWrapper.tsx: the forced theme is back")
+    for needle, what in (
+        ("suppressHydrationWarning", "the class may change before hydration"),
+        ("components/ClientThemeWrapper", "the provider is imported"),
+        ("<ClientThemeWrapper>", "the app is wrapped in it"),
+    ):
+        if needle not in layout:
+            problems.append(f"layout.tsx: {needle!r} missing ({what})")
+
+    # The switcher itself: fork-owned, so existence and behaviour are
+    # judged here rather than left to a chain -- nothing upstream can
+    # ever rewrite it, and no chain replaces an absent file either.
+    switch_path = ROOT / "src" / "components" / "bitzy" / "ThemeSwitch.tsx"
+    if not switch_path.is_file():
+        problems.append("ThemeSwitch.tsx: the fork's theme switcher is missing")
+    else:
+        switch_text = switch_path.read_text()
+        for needle, what in (
+            ("useTheme", "next-themes' hook"),
+            ("setTheme(value)", "all three states through one setter"),
+            ("'system'", "Auto stores the literal system word"),
+            ("aria-pressed", "the active state is announced"),
+            ("const [mounted, setMounted]", "the active pill waits for mount"),
+        ):
+            if needle not in switch_text:
+                problems.append(f"ThemeSwitch.tsx: {needle!r} missing ({what})")
+
+    # ...and the trade itself: no surface may still spell its white out,
+    # because that is the one spelling nothing can follow the theme with.
+    for rel in (
+        "BoardPicker.tsx",
+        "DeviceModal.tsx",
+        "DeviceIntro.tsx",
+        "Features.tsx",
+        "Footer.tsx",
+        "InstructionPanel.tsx",
+        "LandingHero.tsx",
+        "ShopStrip.tsx",
+    ):
+        text = (ROOT / "src" / "components" / rel).read_text()
+        if "bg-white" in text:
+            problems.append(f"{rel}: still spells its panel with bg-white")
 
     # --- Zero traces --------------------------------------------------------
     # Nothing old-brand may ship in any case: tokens, prose, URLs, filenames
@@ -3644,10 +4188,10 @@ def validate() -> None:
         footer_text = footer.read_text()
         if "FIRMWARE_LINKS" in footer_text:
             problems.append("Footer.tsx: the firmware links column is still present")
-        # The notice dialog is a surface like any other: white card, and
-        # no white-on-anything copy left anywhere in the file.
-        if "bg-white p-6 text-[var(--color-ink)]" not in footer_text:
-            problems.append("Footer.tsx: the notice dialog is not the white card")
+        # The notice dialog is a surface like any other: the themed panel
+        # card, and no white-on-anything copy left anywhere in the file.
+        if "bg-[var(--color-panel)] p-6 text-[var(--color-ink)]" not in footer_text:
+            problems.append("Footer.tsx: the notice dialog is not the panel card")
         for gone in ("text-white", "bg-[var(--color-surface)]"):
             if gone in footer_text:
                 problems.append(f"Footer.tsx: the notice dialog's {gone!r} is still there")
@@ -3738,15 +4282,17 @@ def validate() -> None:
         problems.append("LandingHero.tsx: the CSS-canvas comment above the hero is gone")
     if "own dark band" in hero or "dark palette" in hero:
         problems.append("LandingHero.tsx: the comment still describes a dark band")
-    # The band is light, so nothing inside it may still speak for the dark
-    # one: white copy, dark: utilities (forcedTheme keeps them live page-
-    # wide), or the dark surface token. The terminal keeps its own black.
+    # The band reads its ground through tokens either way, so nothing
+    # inside it may spell a theme itself: white copy, dark: utilities, or
+    # the dark surface token. The terminal keeps its own black.
     if "text-white" in hero:
         problems.append("LandingHero.tsx: the band still carries white text")
     if "dark:" in hero:
-        problems.append("LandingHero.tsx: dark: utilities remain on the light band")
+        problems.append("LandingHero.tsx: dark: utilities remain in the band")
     if "bg-[var(--color-surface)]" in hero:
         problems.append("LandingHero.tsx: the status card still sits on the dark surface")
+    if "h-[400px] bg-black" not in hero:
+        problems.append("LandingHero.tsx: the terminal no longer keeps its own black")
     if "#0e0e13" in hero:
         problems.append("LandingHero.tsx: the old black gradient is still spelled out")
     for photo in ("Bitronics_hw", "fondoNM3"):
@@ -3757,7 +4303,7 @@ def validate() -> None:
     if "band-gold" in strip:
         problems.append("ShopStrip.tsx: still uses the crimson fill")
     for cls in (
-        "bg-white",
+        "bg-[var(--color-panel)]",
         "border-[2px]",
         "border-[var(--color-bitzy)]",
         "text-[var(--color-bitzy)]",
@@ -3765,7 +4311,7 @@ def validate() -> None:
     ):
         if cls not in strip:
             problems.append(
-                f"ShopStrip.tsx: missing {cls!r} (white band, 2px crimson border, taller)"
+                f"ShopStrip.tsx: missing {cls!r} (panel ground, 2px crimson border, taller)"
             )
     features = (ROOT / "src" / "components" / "Features.tsx").read_text()
     if "band-light w-full py-6 md:py-8" not in features:
@@ -3778,8 +4324,8 @@ def validate() -> None:
         ("mb-6 text-center", "mb-4 text-center"),
         ("gap-4 md:grid-cols-3", "gap-2.5 md:grid-cols-3"),
         ("gap-3 md:grid-cols-3", "gap-2.5 md:grid-cols-3"),
-        ("bg-white p-6", "bg-white p-3"),
-        ("bg-white p-4", "bg-white p-3"),
+        ("bg-[var(--color-panel)] p-6", "bg-[var(--color-panel)] p-3"),
+        ("bg-[var(--color-panel)] p-4", "bg-[var(--color-panel)] p-3"),
         ("font-display mt-4 font-bold", "font-display mt-2.5 font-bold"),
         ("font-display mt-3 font-bold", "font-display mt-2.5 font-bold"),
         ("h-10 w-10 items-center", "h-9 w-9 items-center"),
@@ -3793,7 +4339,15 @@ def validate() -> None:
     if f'href="https://{DOMAIN}"' not in header:
         problems.append("Header.tsx: the logo does not link to the flasher")
     if "bitzylabs-logo-light.png" not in header:
-        problems.append("Header.tsx: the light wordmark is not on the white bar")
+        problems.append("Header.tsx: the light wordmark is not on the light bar")
+    if "bitzylabs-logo-dark.png" not in header:
+        problems.append("Header.tsx: the dark-scheme wordmark is missing")
+    if "dark:hidden" not in header or "dark:block" not in header:
+        problems.append("Header.tsx: the wordmark pair does not swap per theme")
+    if "import ThemeSwitch from './bitzy/ThemeSwitch';" not in header:
+        problems.append("Header.tsx: the theme switcher is not imported")
+    if "<ThemeSwitch />" not in header:
+        problems.append("Header.tsx: the theme switcher is not rendered")
     if "text-white/70" in header:
         problems.append("Header.tsx: the nav still carries the dark bar's white")
     if "text-[var(--color-muted-warm)]" not in header:
@@ -3817,10 +4371,11 @@ def validate() -> None:
     if "md:hidden" not in header:
         problems.append("Header.tsx: no small-screen instructions button left for mobile")
 
-    # The steps drawer opens off that bar, so it is judged light with it.
+    # The steps drawer opens off that bar, so it is judged with it: the
+    # same panel ground, following the reader's theme like everything else.
     drawer = (ROOT / "src" / "components" / "InstructionPanel.tsx").read_text()
     for needle, what in (
-        ("bg-white text-[var(--color-ink)]", "the white drawer"),
+        ("bg-[var(--color-panel)] text-[var(--color-ink)]", "the drawer on the panel ground"),
         ("border-[var(--color-hairline-light)]", "the light dividers"),
         ("text-[var(--color-muted-warm)]", "store-muted body text"),
     ):
@@ -3840,11 +4395,11 @@ def validate() -> None:
         problems.append("LandingHero.tsx: the drawer's state does not reach the bar")
 
     # The two pickers open off the same band, so they are judged with it:
-    # white panels with light dividers, and no dark-chrome leftover.
+    # the themed panel ground with light dividers, and no dark-chrome leftover.
     for rel in ("DeviceModal.tsx", "BoardPicker.tsx"):
         picker = (ROOT / "src" / "components" / rel).read_text()
         for needle, what in (
-            ("bg-white", "the white panel"),
+            ("bg-[var(--color-panel)]", "the panel that follows the theme"),
             ("border-[var(--color-hairline-light)]", "the light dividers"),
             ("text-[var(--color-muted-warm)]", "store-muted supporting text"),
             ("text-[var(--color-ink)]", "ink headings"),
@@ -3857,10 +4412,11 @@ def validate() -> None:
 
     # --- Credits ------------------------------------------------------------
     footer_text = (ROOT / "src" / "components" / "Footer.tsx").read_text()
-    # The store's footer: white ground, ink text, light wordmark, muted
-    # links with a crimson hover, and no leftover of the dark one.
+    # The store's footer: panel ground (white under light, warm dark
+    # under dark), ink text, light wordmark, muted links with a crimson
+    # hover, and no leftover of the dark one.
     for needle, what in (
-        ('<footer className="mt-8 w-full border-t border-[var(--color-hairline-light)] bg-white text-[var(--color-ink)]">', "the white ground, without the inherited 64px of air"),
+        ('<footer className="mt-8 w-full border-t border-[var(--color-hairline-light)] bg-[var(--color-panel)] text-[var(--color-ink)]">', "the panel ground, without the inherited 64px of air"),
         ("bitzylabs-logo-light.png", "the light wordmark"),
         ("text-[var(--color-muted-warm)]", "muted links and text"),
         ('hover:text-[var(--color-bitzy)]', "the crimson hover"),
@@ -4059,6 +4615,11 @@ def main() -> int:
             patch_page()
             patch_layout()
             patch_palette()
+            # Straight after the palette: its .dark anchor is the block the
+            # palette has just dressed in the store's light values, and the
+            # palette's own replacements must land in :root before anything
+            # re-checks them.
+            patch_theme_schemes()
             # After the palette: the header rule, the canvas and the motion
             # are globals.css text built from the same colour constants.
             patch_chrome()
@@ -4075,6 +4636,9 @@ def main() -> int:
             patch_hero_light()
             patch_picker_panels()
             patch_devboard_panel()
+            # After every pass that writes a white surface or the bar: it
+            # trades what they landed for the theme-aware forms.
+            patch_theme_ui()
             prune_dead_assets()
             strip_png_metadata()
             # Last write, so every targeted patch gets first refusal on the

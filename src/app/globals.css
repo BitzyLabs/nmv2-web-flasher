@@ -81,7 +81,7 @@
 /* Custom scrollbar styles for select components */
 [data-radix-select-viewport] {
   scrollbar-width: thin;
-  scrollbar-color: #9CA3AF #E5E7EB;
+  scrollbar-color: #9CA3AF var(--color-hairline-light);
 }
 
 [data-radix-select-viewport]::-webkit-scrollbar {
@@ -89,7 +89,7 @@
 }
 
 [data-radix-select-viewport]::-webkit-scrollbar-track {
-  background: #E5E7EB;
+  background: var(--color-hairline-light);
   border-radius: 4px;
 }
 
@@ -124,6 +124,11 @@
   --color-ink: #222222;            /* text on a light surface */
   --color-band-light: #F7F6F3;     /* the light band itself */
   --color-hairline-light: #E7E4DE;
+  /* What flips with the reader's theme. The names keep their light
+     meaning here; .dark overrides them for the dark half. */
+  --color-panel: #FFFFFF;   /* raised surfaces: cards, drawers, pickers */
+  --color-bar: rgba(255, 255, 255, 0.85);   /* the fixed bar's ground */
+  --color-hero-lift: #FFFFFF;   /* the top of the hero band, off the bar */
 
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
@@ -209,46 +214,11 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-
-    --radius: 0.5rem;
-  }
-
-  .dark {
-    /* --background: 222.2 84% 4.9%; */
-    --background: 0 0% 100%;
     --foreground: 0 0% 13.33%;
 
-    /* --card: 222.2 84% 4.9%; */
     --card: 0 0% 100%;
     --card-foreground: 0 0% 13.33%;
 
-    /* --popover: 222.2 84% 4.9%; */
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 13.33%;
 
@@ -270,6 +240,54 @@
     --border: 40 15.8% 88.8%;
     --input: 40 15.8% 88.8%;
     --ring: 348 83.33% 47.06%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* Bitzy's dark half: the same house one step down. The ground
+       goes warm near-black, panels lift a step off it, text warms to
+       off-white, crimson does not move. The brand tokens flip with
+       the shadcn ones -- their names keep their light meaning (the
+       @theme block defines them there; this block lives in @layer
+       base, which wins) -- so a component reading a var follows the
+       class on <html> with no change of its own. The terminal keeps
+       its black; it always did, theme or no theme. */
+    --background: 40 12% 9.8%;
+    --foreground: 42 26.3% 92.5%;
+
+    --card: 37.5 12.5% 12.5%;
+    --card-foreground: 42 26.3% 92.5%;
+
+    --popover: 37.5 12.5% 12.5%;
+    --popover-foreground: 42 26.3% 92.5%;
+
+    --primary: 348 83.33% 47.06%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 40 10.8% 16.3%;
+    --secondary-foreground: 42 26.3% 92.5%;
+
+    --muted: 37.5 14.3% 11%;
+    --muted-foreground: 41 9.6% 61.4%;
+
+    --accent: 40 10.8% 16.3%;
+    --accent-foreground: 42 26.3% 92.5%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 40 11.5% 20.4%;
+    --input: 40 11.5% 20.4%;
+    --ring: 348 83.33% 47.06%;
+
+    --color-ink: #F1EEE7;
+    --color-muted-warm: #A6A093;
+    --color-hairline-light: #3A362E;
+    --color-band-light: #1C1A16;
+    --color-panel: #24211C;
+    --color-bar: rgba(36, 33, 28, 0.85);
+    --color-hero-lift: #2B2823;
   }
 }
 
@@ -290,7 +308,7 @@
 
 /* Header chrome, same surface as the store */
 .header-custom {
-  background-color: rgba(255, 255, 255, 0.85);
+  background-color: var(--color-bar);
   border-bottom: 1px solid var(--color-hairline-light);
   width: 100vw;
   position: fixed;
@@ -313,40 +331,54 @@
   }
 }
 
+@supports (backdrop-filter: blur(12px)) {
+  .header-custom {
+    backdrop-filter: blur(14px);
+  }
+}
+
+@supports (-webkit-backdrop-filter: blur(12px)) {
+  .header-custom {
+    -webkit-backdrop-filter: blur(14px);
+  }
+}
+
 /* Add padding to body to compensate for fixed header */
 body {
   padding-top: 5rem; /* 80px = h-20 */
 }
 
 
-/* Custom selector styling - more specific: the store's light scheme.
-   Radix ships its own dark list that beats the tokens, so the trigger
-   and its parts keep the !important -- white cards on the warm band,
-   ink text, the hairline edge, crimson washing the row under the
-   cursor (the chips keep their solid crimson, not the rows). */
+/* Custom selector styling - more specific: the pins follow the
+   reader's theme. Radix ships its own dark list that beats the
+   tokens, so the trigger and its parts keep the !important -- the
+   panel the theme is showing (white under light, the warm dark
+   panel under dark), ink text either way, the hairline edge, and
+   crimson washing the row under the cursor (the chips keep their
+   solid crimson, not the rows). */
 [data-radix-select-trigger],
 button[data-radix-select-trigger],
 button[role="combobox"] {
-  background-color: #ffffff !important;
-  color: #222222 !important;
-  border: 1px solid #E7E4DE !important;
+  background-color: var(--color-panel) !important;
+  color: var(--color-ink) !important;
+  border: 1px solid var(--color-hairline-light) !important;
 }
 
 [data-radix-select-content],
 div[data-radix-select-content],
 [data-radix-popper-content-wrapper] > div,
 div[data-radix-popper-content-wrapper] {
-  background-color: #ffffff !important;
-  color: #222222 !important;
-  border: 1px solid #E7E4DE !important;
+  background-color: var(--color-panel) !important;
+  color: var(--color-ink) !important;
+  border: 1px solid var(--color-hairline-light) !important;
   box-shadow: 0 10px 38px -10px rgba(0, 0, 0, 0.35), 0 10px 20px -15px rgba(0, 0, 0, 0.2) !important;
 }
 
 [data-radix-select-item],
 div[data-radix-select-item],
 [role="option"] {
-  background-color: #ffffff !important;
-  color: #222222 !important;
+  background-color: var(--color-panel) !important;
+  color: var(--color-ink) !important;
   padding: 8px 12px !important;
 }
 
@@ -368,24 +400,24 @@ div[data-radix-select-item][data-highlighted],
 
 /* Radix Select viewport and scrollarea */
 [data-radix-select-viewport] {
-  background-color: #ffffff !important;
+  background-color: var(--color-panel) !important;
 }
 
 [data-radix-scroll-area-viewport] {
-  background-color: #ffffff !important;
+  background-color: var(--color-panel) !important;
 }
 
 /* Fallback with higher specificity */
 .select-content,
 div[class*="select"] {
-  background-color: #ffffff !important;
-  color: #222222 !important;
+  background-color: var(--color-panel) !important;
+  color: var(--color-ink) !important;
 }
 
 .select-item,
 div[class*="select"] > div {
-  background-color: #ffffff !important;
-  color: #222222 !important;
+  background-color: var(--color-panel) !important;
+  color: var(--color-ink) !important;
 }
 
 /* Custom size for 25% larger icons */
@@ -525,7 +557,7 @@ body {
    is what propagates to the canvas here -- the same element the old JS
    gradient used to paint, now painted once and for good. */
 body {
-  background-color: #F7F6F3;
+  background-color: var(--color-band-light);
   background-image:
     url('/pictures/logo-tile.svg'),
     radial-gradient(800px 420px at 88% -10%, rgba(220, 20, 60, 0.10), transparent 60%),
@@ -536,17 +568,17 @@ body {
 }
 
 /* The flasher's own band: the store's ground under the store's glow,
-   our mark tiled at the page's 512px cell, and a lift off white at
+   our mark tiled at the page's 512px cell, and a lift off the bar at
    the top so the band separates from the fixed bar without going
    dark -- the tool room turned into another room of the house. The
    glow drifts on a slow loop; the reduce block below stops it. */
 .bitzy-hero {
-  background-color: #F7F6F3;
+  background-color: var(--color-band-light);
   background-image:
     url('/pictures/logo-tile.svg'),
     radial-gradient(900px 480px at 85% -20%, rgba(220, 20, 60, 0.10), transparent 60%),
     radial-gradient(760px 520px at -12% 115%, rgba(220, 20, 60, 0.06), transparent 55%),
-    linear-gradient(180deg, #ffffff 0%, #F7F6F3 62%, #F7F6F3 100%);
+    linear-gradient(180deg, var(--color-hero-lift) 0%, var(--color-band-light) 62%, var(--color-band-light) 100%);
   background-repeat: repeat, no-repeat, no-repeat, no-repeat;
   background-size: 512px auto, auto, auto, auto;
   animation: bitzy-glow 14s ease-in-out infinite alternate;

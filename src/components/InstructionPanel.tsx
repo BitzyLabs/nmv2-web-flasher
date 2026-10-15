@@ -26,7 +26,7 @@ export default function InstructionPanel({ isOpen, onClose }: InstructionPanelPr
 
       <aside
         aria-hidden={!isOpen}
-        className={`fixed right-0 top-20 z-50 flex h-[calc(100vh-5rem)] w-[min(22rem,100vw)] flex-col border-l border-[var(--color-hairline-light)] bg-white text-[var(--color-ink)] shadow-2xl transition-transform duration-300 ease-out ${
+        className={`fixed right-0 top-20 z-50 flex h-[calc(100vh-5rem)] w-[min(22rem,100vw)] flex-col border-l border-[var(--color-hairline-light)] bg-[var(--color-panel)] text-[var(--color-ink)] shadow-2xl transition-transform duration-300 ease-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >

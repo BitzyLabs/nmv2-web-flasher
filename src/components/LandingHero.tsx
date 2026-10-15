@@ -1452,7 +1452,7 @@ export default function LandingHero() {
                       onChange={(e) => setApName(e.target.value)}
                       placeholder="Enter AP name (max 31 chars)"
                       maxLength={31}
-                      className="w-64 px-3 py-2 text-sm border border-[var(--color-hairline-light)] bg-white rounded-md text-[var(--color-ink)] placeholder:text-[var(--color-muted-warm)] focus:outline-none focus:ring-2 focus:ring-bitzy focus:border-transparent"
+                      className="w-64 px-3 py-2 text-sm border border-[var(--color-hairline-light)] bg-[var(--color-panel)] rounded-md text-[var(--color-ink)] placeholder:text-[var(--color-muted-warm)] focus:outline-none focus:ring-2 focus:ring-bitzy focus:border-transparent"
                     />
                     {apName && !validateSSID(apName) && (
                       <p className="text-xs text-red-500">
@@ -1525,7 +1525,7 @@ export default function LandingHero() {
                       ? 'border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10'
                       : statusKind === 'done'
                         ? 'border-[var(--color-success)]/40 bg-[var(--color-success)]/10'
-                        : 'border-[var(--color-hairline-light)] bg-white'
+                        : 'border-[var(--color-hairline-light)] bg-[var(--color-panel)]'
                   }`}
                 >
                   <div className="flex items-start gap-3">

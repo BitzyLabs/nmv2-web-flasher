@@ -113,8 +113,8 @@ export default function BoardPicker({
           isOpen ? 'scale-100 opacity-100' : 'pointer-events-none scale-95 opacity-0'
         }`}
       >
-        <div className="h-fit w-full max-w-5xl overflow-hidden rounded-2xl border border-[var(--color-hairline-light)] bg-white shadow-2xl">
-          <div className="sticky top-0 z-10 border-b border-[var(--color-hairline-light)] bg-white px-6 py-5">
+        <div className="h-fit w-full max-w-5xl overflow-hidden rounded-2xl border border-[var(--color-hairline-light)] bg-[var(--color-panel)] shadow-2xl">
+          <div className="sticky top-0 z-10 border-b border-[var(--color-hairline-light)] bg-[var(--color-panel)] px-6 py-5">
             <div className="flex items-start justify-between">
               <div>
                 <p className="brand-kicker">Step 2</p>
@@ -168,7 +168,7 @@ export default function BoardPicker({
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       placeholder="Search boards"
-                      className="w-44 rounded-full border border-[var(--color-hairline-light)] bg-white py-1 pl-8 pr-3 text-xs text-[var(--color-ink)] placeholder:text-[var(--color-muted-warm)] focus:border-[var(--color-bitzy)] focus:outline-none"
+                      className="w-44 rounded-full border border-[var(--color-hairline-light)] bg-[var(--color-panel)] py-1 pl-8 pr-3 text-xs text-[var(--color-ink)] placeholder:text-[var(--color-muted-warm)] focus:border-[var(--color-bitzy)] focus:outline-none"
                     />
                   </div>
                 )}
@@ -194,7 +194,7 @@ export default function BoardPicker({
                       className={`group flex flex-col rounded-xl border p-3 text-left transition-all duration-200 hover:-translate-y-0.5 ${
                         isSelected
                           ? 'border-[var(--color-bitzy)] bg-[var(--color-band-light)]'
-                          : 'border-[var(--color-hairline-light)] bg-white hover:border-[var(--color-bitzy)]/50'
+                          : 'border-[var(--color-hairline-light)] bg-[var(--color-panel)] hover:border-[var(--color-bitzy)]/50'
                       }`}
                     >
                       <BoardArt board={board.file} className="aspect-[5/4] w-full" />
