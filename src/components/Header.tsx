@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import ThemeSwitch from './bitzy/ThemeSwitch';
+import { Menu, X } from 'lucide-react';
+import { useState } from 'react';
 
 const basePath = '';
 
@@ -17,6 +19,7 @@ interface HeaderProps {
 
 export default function Header({ onTogglePanel, panelOpen }: HeaderProps) {
   const { t } = useTranslation();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <header className="h-20 header-custom">
@@ -64,16 +67,52 @@ export default function Header({ onTogglePanel, panelOpen }: HeaderProps) {
         </nav>
 
         <div className="flex flex-1 items-center justify-end gap-4 sm:gap-5">
-          <ThemeSwitch />
+          <div className="hidden md:block">
+            <ThemeSwitch />
+          </div>
           <button
-            onClick={onTogglePanel}
-            aria-expanded={panelOpen}
-            className="text-sm font-medium text-[var(--color-muted-warm)] transition-colors hover:text-[var(--color-bitzy)] md:hidden"
+            type="button"
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-expanded={menuOpen}
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            className="rounded-lg p-2 text-[var(--color-muted-warm)] transition-colors hover:text-[var(--color-bitzy)] md:hidden"
           >
-            {t('header.instructions')}
+            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
       </div>
+      {menuOpen && (
+        <div className="absolute inset-x-0 top-full border-b border-[var(--color-hairline-light)] bg-[var(--color-panel)] px-4 pb-4 pt-2 shadow-lg md:hidden">
+          <nav className="flex flex-col items-stretch gap-1">
+            {SITE_LINKS.map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setMenuOpen(false)}
+                className="rounded-lg px-3 py-2.5 text-sm font-medium text-[var(--color-muted-warm)] transition-colors hover:bg-black/5 hover:text-[var(--color-bitzy)]"
+              >
+                {link.label}
+              </a>
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                onTogglePanel();
+              }}
+              aria-expanded={panelOpen}
+              className="rounded-lg px-3 py-2.5 text-left text-sm font-medium text-[var(--color-muted-warm)] transition-colors hover:bg-black/5 hover:text-[var(--color-bitzy)]"
+            >
+              {t('header.instructions')}
+            </button>
+          </nav>
+          <div className="mt-2 flex justify-center border-t border-[var(--color-hairline-light)] pt-3">
+            <ThemeSwitch />
+          </div>
+        </div>
+      )}
     </header>
   );
 }

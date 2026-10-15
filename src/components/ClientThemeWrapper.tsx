@@ -2,6 +2,8 @@
 
 import { ThemeProvider } from 'next-themes';
 
+import MobileGate from './bitzy/MobileGate';
+
 /**
  * Light, dark, and the system setting between them.
  *
@@ -18,6 +20,12 @@ import { ThemeProvider } from 'next-themes';
  * The choice persists under its storageKey, so whatever the reader picks
  * is what they get on the next load -- the default only ever applies
  * once, to a browser that has never chosen.
+ *
+ * Under the provider sits the phone's poster: below the md breakpoint
+ * the flasher cannot flash, so MobileGate says so over the whole
+ * screen and offers the store instead. It rides here rather than in
+ * layout.tsx because it is ours, not upstream's -- nothing a merge
+ * can take back out.
  */
 export function ClientThemeWrapper({ children }: { children: React.ReactNode }) {
   return (
@@ -29,6 +37,7 @@ export function ClientThemeWrapper({ children }: { children: React.ReactNode }) 
       disableTransitionOnChange
     >
       {children}
+      <MobileGate />
     </ThemeProvider>
   );
 }

@@ -3568,6 +3568,122 @@ def patch_theme_ui() -> None:
     note(changed, "components: bg-white -> --color-panel, which follows the reader's theme")
 
 
+def patch_mobile_menu() -> None:
+    """The bar's small screens get a hamburger; the phone gets a poster.
+
+    Below md there is no room for the pill, the Instructions trigger and
+    the wordmark on one line, and the phone cannot flash anyway. So the
+    pill steps behind a hamburger (a plain wrapper -- the switcher
+    itself is fork-owned and stays honest anywhere it lands), the
+    small-screen Instructions button goes into the menu with it, and
+    the hamburger swaps its own icon as it opens and shuts. The menu
+    hangs off the bar's bottom edge on the panel token, so it follows
+    the theme like everything else.
+
+    The poster itself -- MobileGate -- is fork-owned and needs no chain;
+    this function only dresses the header it shares a breakpoint with.
+    """
+    path = ROOT / "src" / "components" / "Header.tsx"
+
+    # Imports and state: the anchors are lines the file already has (the
+    # switcher import this fork lands, upstream's translation hook), the
+    # markers are lines only this chain writes.
+    changed = inject_once(
+        path,
+        "import { Menu, X } from 'lucide-react';",
+        "import ThemeSwitch from './bitzy/ThemeSwitch';\n",
+        "import ThemeSwitch from './bitzy/ThemeSwitch';\n"
+        "import { Menu, X } from 'lucide-react';\n"
+        "import { useState } from 'react';\n",
+    )
+    changed |= inject_once(
+        path,
+        "const [menuOpen, setMenuOpen] = useState(false);",
+        "  const { t } = useTranslation();\n",
+        "  const { t } = useTranslation();\n"
+        "  const [menuOpen, setMenuOpen] = useState(false);\n",
+    )
+    # The controls, whole: the pill wraps in a desktop-only shell, the
+    # small-screen Instructions button leaves for the menu, and the
+    # hamburger takes the corner.
+    changed |= replace_once(
+        path,
+        '        <div className="flex flex-1 items-center justify-end gap-4 sm:gap-5">\n'
+        "          <ThemeSwitch />\n"
+        "          <button\n"
+        "            onClick={onTogglePanel}\n"
+        "            aria-expanded={panelOpen}\n"
+        '            className="text-sm font-medium text-[var(--color-muted-warm)] '
+        'transition-colors hover:text-[var(--color-bitzy)] md:hidden"\n'
+        "          >\n"
+        "            {t('header.instructions')}\n"
+        "          </button>\n"
+        "        </div>\n",
+        '        <div className="flex flex-1 items-center justify-end gap-4 sm:gap-5">\n'
+        '          <div className="hidden md:block">\n'
+        "            <ThemeSwitch />\n"
+        "          </div>\n"
+        "          <button\n"
+        '            type="button"\n'
+        "            onClick={() => setMenuOpen((open) => !open)}\n"
+        "            aria-expanded={menuOpen}\n"
+        "            aria-label={menuOpen ? 'Close menu' : 'Open menu'}\n"
+        '            className="rounded-lg p-2 text-[var(--color-muted-warm)] '
+        'transition-colors hover:text-[var(--color-bitzy)] md:hidden"\n'
+        "          >\n"
+        "            {menuOpen ? <X className=\"h-5 w-5\" /> : <Menu className=\"h-5 w-5\" />}\n"
+        "          </button>\n"
+        "        </div>\n",
+    )
+    # The menu itself, hanging off the bar's bottom edge. Each item
+    # shuts it on the way out; Instructions also opens the drawer it
+    # stands in for.
+    changed |= replace_once(
+        path,
+        "    </header>\n",
+        "      {menuOpen && (\n"
+        '        <div className="absolute inset-x-0 top-full border-b '
+        'border-[var(--color-hairline-light)] bg-[var(--color-panel)] px-4 pb-4 pt-2 shadow-lg md:hidden">\n'
+        '          <nav className="flex flex-col items-stretch gap-1">\n'
+        "            {SITE_LINKS.map((link) => (\n"
+        "              <a\n"
+        "                key={link.label}\n"
+        "                href={link.href}\n"
+        '                target="_blank"\n'
+        '                rel="noopener noreferrer"\n'
+        "                onClick={() => setMenuOpen(false)}\n"
+        '                className="rounded-lg px-3 py-2.5 text-sm font-medium '
+        'text-[var(--color-muted-warm)] transition-colors hover:bg-black/5 '
+        'hover:text-[var(--color-bitzy)]"\n'
+        "              >\n"
+        "                {link.label}\n"
+        "              </a>\n"
+        "            ))}\n"
+        "            <button\n"
+        '              type="button"\n'
+        "              onClick={() => {\n"
+        "                setMenuOpen(false);\n"
+        "                onTogglePanel();\n"
+        "              }}\n"
+        "              aria-expanded={panelOpen}\n"
+        '              className="rounded-lg px-3 py-2.5 text-left text-sm font-medium '
+        'text-[var(--color-muted-warm)] transition-colors hover:bg-black/5 '
+        'hover:text-[var(--color-bitzy)]"\n'
+        "            >\n"
+        "              {t('header.instructions')}\n"
+        "            </button>\n"
+        "          </nav>\n"
+        '          <div className="mt-2 flex justify-center border-t '
+        'border-[var(--color-hairline-light)] pt-3">\n'
+        "            <ThemeSwitch />\n"
+        "          </div>\n"
+        "        </div>\n"
+        "      )}\n"
+        "    </header>\n",
+    )
+    note(changed, "Header.tsx: hamburger below md, pill and Instructions inside it")
+
+
 def prune_dead_assets() -> None:
     """Files nothing renders any more, and firmware nothing can reach.
 
@@ -4127,6 +4243,29 @@ def validate() -> None:
             if needle not in switch_text:
                 problems.append(f"ThemeSwitch.tsx: {needle!r} missing ({what})")
 
+    # The phone's poster: fork-owned like the switcher, so existence and
+    # behaviour are judged here. It shares the hamburger's breakpoint on
+    # purpose -- one rule, one idea of "small".
+    gate_path = ROOT / "src" / "components" / "bitzy" / "MobileGate.tsx"
+    if not gate_path.is_file():
+        problems.append("MobileGate.tsx: the phone's poster is missing")
+    else:
+        gate_text = gate_path.read_text()
+        for needle, what in (
+            ("(max-width: 767px)", "the md breakpoint, the hamburger's own rule"),
+            ("bitzy-gate-dismissed", "the escape hides it for this tab"),
+            ("bitzylabs-logo-dark.png", "the wordmark that reads on the dark poster"),
+            ("THIS FLASHER", "the one thing the poster has to say"),
+            ("font-data", "the dot face, as asked"),
+            ("href={STORE_URL}", "the store, linked"),
+            ("aria-modal", "it is a dialog to the reader's browser"),
+        ):
+            if needle not in gate_text:
+                problems.append(f"MobileGate.tsx: {needle!r} missing ({what})")
+    wrapper_text = wrapper  # the provider's own read, above
+    if "<MobileGate />" not in wrapper_text:
+        problems.append("ClientThemeWrapper.tsx: the poster does not render")
+
     # ...and the trade itself: no surface may still spell its white out,
     # because that is the one spelling nothing can follow the theme with.
     for rel in (
@@ -4348,6 +4487,22 @@ def validate() -> None:
         problems.append("Header.tsx: the theme switcher is not imported")
     if "<ThemeSwitch />" not in header:
         problems.append("Header.tsx: the theme switcher is not rendered")
+    # The hamburger carries the bar below md: the pill wraps in a
+    # desktop-only shell, the menu hangs off the bar's bottom edge on
+    # the panel token, and the button says which way it is pointing.
+    for needle, what in (
+        ("setMenuOpen", "the menu has a state to open with"),
+        ("Menu, X", "the two icons it swaps between"),
+        ("aria-label={menuOpen ? 'Close menu' : 'Open menu'}", "it says what it does"),
+        ("hidden md:block", "the pill steps behind it below md"),
+        ("{menuOpen && (", "the menu panel itself"),
+        ("hover:bg-black/5", "its rows light under the cursor"),
+        ("flex justify-center border-t", "the pill centred in the menu"),
+    ):
+        if needle not in header:
+            problems.append(f"Header.tsx: {needle!r} missing ({what})")
+    if "text-sm font-medium text-[var(--color-muted-warm)] transition-colors hover:text-[var(--color-bitzy)] md:hidden" in header:
+        problems.append("Header.tsx: the bar still carries its own small-screen button")
     if "text-white/70" in header:
         problems.append("Header.tsx: the nav still carries the dark bar's white")
     if "text-[var(--color-muted-warm)]" not in header:
@@ -4639,6 +4794,9 @@ def main() -> int:
             # After every pass that writes a white surface or the bar: it
             # trades what they landed for the theme-aware forms.
             patch_theme_ui()
+            # After the theme UI: it dresses the same header the
+            # hamburger hangs off, and moves the pill behind it below md.
+            patch_mobile_menu()
             prune_dead_assets()
             strip_png_metadata()
             # Last write, so every targeted patch gets first refusal on the
