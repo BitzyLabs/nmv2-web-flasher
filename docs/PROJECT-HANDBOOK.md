@@ -423,10 +423,19 @@ bash scripts/sync-upstream.sh
 
 ## 10. Firmware automation
 
-- `update-firmware.yml` (daily 02:00 UTC) checks upstream release assets,
-  downloads matching `.bin`s into `public/firmware/<device>/`, rewrites
-  `src/components/firmware_data.json` (tiles: version, size, hash,
-  "Latest"), commits with `GITHUB_TOKEN`.
+- `update-firmware.yml` (daily 02:00 UTC) pulls releases **straight from
+  the external firmware projects** — the source repos configured in
+  `scripts/update-firmware.js` (e.g. `NerdMiner_v2`,
+  `shufps/ESP-Miner-NerdQAxePlus`) — **never from upstream's code repo**.
+  It downloads the matching `.bin`s into `public/firmware/<device>/`,
+  rewrites `src/components/firmware_data.json` (tiles: version, size, hash,
+  "Latest"), and commits with `GITHUB_TOKEN`; the commit step stages only
+  the firmware this picker still serves. The bench-test firmwares
+  (`esp32s3-smoothblinky`, `stm32-bluepill`) are **not** bot-managed — they
+  are static files committed by us.
+- **Firmware and the code sync (§9) are fully independent paths.** You can
+  keep, pause, or retire either without affecting the other. (Decision of
+  record, Oct 2026: keep both — see §17.8.)
 - **Trap (already bitten once):** pushes made with the repo `GITHUB_TOKEN`
   do **not** trigger other workflows. `nextjs.yml` therefore also triggers
   on `workflow_run` of *Update Firmware Releases* — without it the live
@@ -605,6 +614,13 @@ Condensed, so you know *why* things are the way they are:
 7. **STM32 = WebUSB/ST-Link only** is a product decision, not an omission.
    The mobile gate exists for the same reason: the browser APIs this thing
    needs live on desktop.
+8. **The code sync stays fully automatic** (reviewed Oct 2026 when the
+   question "can't we just take firmware?" was raised — firmware was never
+   on the sync path, §10). Upstream's real commits land green through the
+   patcher (e.g. `34e24db`, a shared flash-flow fix, merged and deployed by
+   the nightly), while about half their commit volume is firmware-bot noise
+   the patcher prunes right back out. Retire or downgrade the sync only if
+   the nightlies start going red routinely.
 
 ---
 
