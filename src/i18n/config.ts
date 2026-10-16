@@ -27,6 +27,9 @@ i18n
       sk: { translation: sk },
       ro: { translation: ro } 
     },
+    // Bundled resources, so init can finish before the first render --
+    // the page is prerendered, and a pending i18next would take it all.
+    initImmediate: false,
     fallbackLng: 'en',
     lng: 'en', // Set default language to English
     interpolation: {

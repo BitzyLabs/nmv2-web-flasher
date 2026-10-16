@@ -1161,6 +1161,76 @@ def patch_layout() -> None:
     )
 
 
+def patch_i18n_ssr() -> None:
+    """The page is statically exported; a client-only gate erases it.
+
+    I18nProvider used to return null until a useEffect marked the client
+    alive, so the prerendered HTML shipped a title and a shell and no
+    content at all -- crawlers met no h1 and no text, and Bing said so.
+    The translations are bundled, so i18next can be ready before React
+    ever renders: initImmediate hands it over synchronously, the
+    provider stops gating, and the children render on the server pass
+    and hydrate untouched (explicit lng means both passes say English).
+    """
+    cfg = ROOT / "src" / "i18n" / "config.ts"
+    provider = ROOT / "src" / "components" / "I18nProvider.tsx"
+    changed = replace_if_present(
+        cfg,
+        "    fallbackLng: 'en',\n    lng: 'en', // Set default language to English\n",
+        "    // Bundled resources, so init can finish before the first render --\n"
+        "    // the page is prerendered, and a pending i18next would take it all.\n"
+        "    initImmediate: false,\n"
+        "    fallbackLng: 'en',\n"
+        "    lng: 'en', // Set default language to English\n",
+    )
+    changed |= replace_if_present(
+        provider,
+        "import { useEffect, useState } from 'react';\n",
+        "",
+    )
+    changed |= replace_if_present(
+        provider,
+        "  const [isI18nInitialized, setIsI18nInitialized] = useState(false);\n"
+        "\n"
+        "  useEffect(() => {\n"
+        "    setIsI18nInitialized(true);\n"
+        "  }, []);\n"
+        "\n"
+        "  if (!isI18nInitialized) {\n"
+        "    return null;\n"
+        "  }\n"
+        "\n"
+        "  return <>{children}</>;\n"
+        "}",
+        "  // The old gate held the page back until a client effect fired --\n"
+        "  // honest on the client, but it erased everything from the static\n"
+        "  // export, so a crawler's first look was a titled shell with no\n"
+        "  // content in it. The translations are bundled and initImmediate\n"
+        "  // hands i18next ready before React ever renders, so the children\n"
+        "  // render on the server pass and hydrate untouched.\n"
+        "  return <>{children}</>;\n"
+        "}",
+    )
+    note(changed, "i18n: ready before the first render, provider stops gating the page")
+
+
+def patch_package_scripts() -> None:
+    """The build regenerates the sitemap, so every deploy stays honest.
+
+    The generator and the sitemap itself are fork-owned -- a sync cannot
+    touch files upstream never had -- but the hook that runs them lives
+    in package.json, which upstream owns, so the hook is a chain like
+    everything else that touches their tree.
+    """
+    pkg = ROOT / "package.json"
+    changed = replace_if_present(
+        pkg,
+        '        "build": "next build",\n',
+        '        "build": "node scripts/make-sitemap.mjs && next build",\n',
+    )
+    note(changed, "package.json: the build regenerates the sitemap")
+
+
 def patch_palette() -> None:
     """One line per colour rather than the whole block.
 
@@ -4260,6 +4330,46 @@ def validate() -> None:
         if needle not in layout:
             problems.append(f"layout.tsx: {needle!r} missing ({what})")
 
+    # The static export has to carry the page, not a shell: i18n ready
+    # before the first render, and no provider between it and the tree.
+    i18n_cfg = (ROOT / "src" / "i18n" / "config.ts").read_text()
+    if "initImmediate: false" not in i18n_cfg:
+        problems.append(
+            "i18n/config.ts: 'initImmediate: false' missing "
+            "(i18n must be ready before the first render)"
+        )
+    i18n_provider = (ROOT / "src" / "components" / "I18nProvider.tsx").read_text()
+    if "isI18nInitialized" in i18n_provider:
+        problems.append(
+            "I18nProvider.tsx: the render gate is back "
+            "(the page would vanish from the static export)"
+        )
+
+    # The crawler surface around the page: a sitemap with the right URL,
+    # a robots that points at it, a build that refreshes it, and a
+    # deploy that pings Bing the moment it lands.
+    sitemap_path = ROOT / "public" / "sitemap.xml"
+    if not sitemap_path.exists():
+        problems.append("public/sitemap.xml: missing (the build script writes it)")
+    elif "<loc>https://flasher.bitzylabs.com/</loc>" not in sitemap_path.read_text():
+        problems.append("public/sitemap.xml: the home URL is missing")
+    robots_path = ROOT / "public" / "robots.txt"
+    if not robots_path.exists():
+        problems.append("public/robots.txt: missing")
+    elif (
+        "Sitemap: https://flasher.bitzylabs.com/sitemap.xml"
+        not in robots_path.read_text()
+    ):
+        problems.append("public/robots.txt: the sitemap pointer is missing")
+    package_json = (ROOT / "package.json").read_text()
+    if "make-sitemap.mjs" not in package_json:
+        problems.append("package.json: the build no longer regenerates the sitemap")
+    deploy_workflow = (ROOT / ".github" / "workflows" / "nextjs.yml").read_text()
+    if "api.indexnow.org" not in deploy_workflow:
+        problems.append(
+            "nextjs.yml: the IndexNow ping is gone (Bing would wait for crawls)"
+        )
+
     # The switcher itself: fork-owned, so existence and behaviour are
     # judged here rather than left to a chain -- nothing upstream can
     # ever rewrite it, and no chain replaces an absent file either.
@@ -4804,6 +4914,10 @@ def main() -> int:
             patch_features()
             patch_page()
             patch_layout()
+            # Independent of the skin: the static export must carry the page
+            # itself and not a shell -- see the docstring.
+            patch_i18n_ssr()
+            patch_package_scripts()
             patch_palette()
             # Straight after the palette: its .dark anchor is the block the
             # palette has just dressed in the store's light values, and the
