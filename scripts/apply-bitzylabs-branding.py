@@ -1096,6 +1096,37 @@ def patch_layout() -> None:
         f"  title: '{BRAND} Flasher',\n",
         f"  themeColor: '{CRIMSON}',\n  title: '{BRAND} Flasher',\n",
     )
+    # Bing's site-verification token. The metadata export is where a meta
+    # tag belongs in Next 13 -- the static export renders it into the head
+    # itself. This Next predates the `bing` shorthand, so the token rides
+    # the open-door `other` map, which renders name/content verbatim.
+    # After the description replace above, so the anchor exists on a
+    # fresh run too. The first spelling that shipped today used `bing:`
+    # and failed the type check; the migration below trades any tree
+    # wearing it before this inject gets a look in.
+    changed |= replace_if_present(
+        path,
+        "  verification: {\n"
+        "    bing: 'B318F6CB35494283D623E8111AA11060',\n"
+        "  },\n",
+        "  verification: {\n"
+        "    other: {\n"
+        "      'msvalidate.01': 'B318F6CB35494283D623E8111AA11060',\n"
+        "    },\n"
+        "  },\n",
+    )
+    changed |= inject_once(
+        path,
+        "'msvalidate.01': 'B318F6CB",
+        "  description: 'Flash your mining hardware directly from the web',\n  icons: {",
+        "  description: 'Flash your mining hardware directly from the web',\n"
+        "  verification: {\n"
+        "    other: {\n"
+        "      'msvalidate.01': 'B318F6CB35494283D623E8111AA11060',\n"
+        "    },\n"
+        "  },\n"
+        "  icons: {",
+    )
     # The theme provider wraps the app, and upstream's layout never had it
     # -- a fresh sync brings the wrapper and its import back gone, so both
     # land again here. The import first, then the wrapper: the markers are
@@ -1124,7 +1155,10 @@ def patch_layout() -> None:
         "          </I18nProvider>\n"
         "        </ClientThemeWrapper>\n",
     )
-    note(changed, "layout.tsx: page title, description, theme-color, theme provider")
+    note(
+        changed,
+        "layout.tsx: page title, description, theme-color, Bing verification, theme provider",
+    )
 
 
 def patch_palette() -> None:
@@ -4221,6 +4255,7 @@ def validate() -> None:
         ("suppressHydrationWarning", "the class may change before hydration"),
         ("components/ClientThemeWrapper", "the provider is imported"),
         ("<ClientThemeWrapper>", "the app is wrapped in it"),
+        ("'msvalidate.01': 'B318F6CB35494283D623E8111AA11060'", "Bing can verify the site"),
     ):
         if needle not in layout:
             problems.append(f"layout.tsx: {needle!r} missing ({what})")

@@ -11,6 +11,11 @@ export const metadata: Metadata = {
   themeColor: '#DC143C',
   title: 'Bitzy Labs Flasher',
   description: 'Flash your mining hardware directly from the web',
+  verification: {
+    other: {
+      'msvalidate.01': 'B318F6CB35494283D623E8111AA11060',
+    },
+  },
   icons: {
     icon: [
       {
