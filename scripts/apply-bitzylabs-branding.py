@@ -1231,6 +1231,29 @@ def patch_package_scripts() -> None:
     note(changed, "package.json: the build regenerates the sitemap")
 
 
+def patch_dependency_pins() -> None:
+    """The versions the Aikido scan asked for, re-landed after merges.
+
+    package.json is upstream's, so a nightly merge can trade these back
+    to the vulnerable lines. The sync's KEEP list restores our manifest
+    and lock together; these chains are the second net for any path
+    where the restore did not run, and validation pins both numbers
+    loudly if either ever slips.
+    """
+    pkg = ROOT / "package.json"
+    changed = replace_if_present(
+        pkg,
+        '        "axios": "^1.12.1",\n',
+        '        "axios": "^1.20.0",\n',
+    )
+    changed |= replace_if_present(
+        pkg,
+        '        "next": "13.4.12",\n',
+        '        "next": "13.5.11",\n',
+    )
+    note(changed, "package.json: the Aikido pins hold (axios, next)")
+
+
 def patch_palette() -> None:
     """One line per colour rather than the whole block.
 
@@ -4364,6 +4387,19 @@ def validate() -> None:
     package_json = (ROOT / "package.json").read_text()
     if "make-sitemap.mjs" not in package_json:
         problems.append("package.json: the build no longer regenerates the sitemap")
+    # The versions the Aikido dependency scan asked for. npm ci guards
+    # the lock; these guard the intent, so a sync that trades the pins
+    # back goes red instead of quietly shipping the CVEs again.
+    if '"axios": "^1.20.0"' not in package_json:
+        problems.append(
+            "package.json: the axios pin slipped "
+            "(Aikido: four CVEs at ^1.12.1, remediation ^1.15.2)"
+        )
+    if '"next": "13.5.11"' not in package_json:
+        problems.append(
+            "package.json: the next pin slipped "
+            "(Aikido: fourteen CVEs at 13.4.12, 13.5.x clears the major)"
+        )
     deploy_workflow = (ROOT / ".github" / "workflows" / "nextjs.yml").read_text()
     if "api.indexnow.org" not in deploy_workflow:
         problems.append(
@@ -4918,6 +4954,7 @@ def main() -> int:
             # itself and not a shell -- see the docstring.
             patch_i18n_ssr()
             patch_package_scripts()
+            patch_dependency_pins()
             patch_palette()
             # Straight after the palette: its .dark anchor is the block the
             # palette has just dressed in the store's light values, and the

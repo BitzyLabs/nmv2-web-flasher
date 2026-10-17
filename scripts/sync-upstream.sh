@@ -67,6 +67,13 @@ KEEP=(
   .github/workflows/nextjs.yml
   .github/workflows/update-firmware.yml
   .github/workflows/sync-upstream.yml
+  # Upstream owns these two, but our pins (axios, next -- Aikido CVE
+  # remediations) live in them and the pair must always ship together:
+  # restore both from our side so npm ci never meets a lock that
+  # disagrees with the manifest, and let the patcher's chains re-land
+  # anything a merge still manages to trade back.
+  package.json
+  package-lock.json
 )
 
 echo "==> Fetching ${UPSTREAM_REMOTE}/${UPSTREAM_BRANCH}"

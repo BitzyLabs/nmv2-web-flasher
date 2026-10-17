@@ -109,17 +109,26 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
+      # Checked out only so the IndexNow step below can read the key
+      # file back out of the tree; the build itself comes from the
+      # artifact, not from here.
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
       # IndexNow is how Bing learns what changed the moment it ships --
       # the old /ping endpoints are gone and this is their replacement.
-      # The key file (public/<key>.txt) publishes with the site itself.
-      # A refused ping -- duplicate URL in flight, transient outage --
-      # must never fail a deployment that has already gone live.
+      # The key lives in exactly one place, the public/<key>.txt file
+      # that publishes with the site, and this step reads it back out:
+      # no key literal in the workflow for a scanner to meet, and the
+      # two can never drift apart. A refused ping -- duplicate URL in
+      # flight, transient outage -- must never fail a deployment that
+      # has already gone live.
       - name: Tell Bing what changed (IndexNow)
         continue-on-error: true
         run: |
+          KEY=$(basename "$(ls public/*.txt | grep -v robots | head -n1)" .txt)
           curl -sS -X POST https://api.indexnow.org/indexnow \
             -H 'Content-Type: application/json; charset=utf-8' \
-            -d '{"host":"flasher.bitzylabs.com","key":"73d4700bb99e80a8767219cfa3c3b257","keyLocation":"https://flasher.bitzylabs.com/73d4700bb99e80a8767219cfa3c3b257.txt","urlList":["https://flasher.bitzylabs.com/"]}'
+            -d "{\"host\":\"flasher.bitzylabs.com\",\"key\":\"$KEY\",\"keyLocation\":\"https://flasher.bitzylabs.com/$KEY.txt\",\"urlList\":[\"https://flasher.bitzylabs.com/\"]}"

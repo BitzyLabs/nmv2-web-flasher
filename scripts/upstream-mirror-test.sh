@@ -159,7 +159,9 @@ for keep in \
   scripts/sync-upstream.sh \
   scripts/upstream-mirror-test.sh \
   .bitzylabs-overlay/assets/logo-tile.svg \
-  .github/workflows/nextjs.yml; do
+  .github/workflows/nextjs.yml \
+  package.json \
+  package-lock.json; do
   [ -e "$keep" ] || die "KEEP lost $keep through the sync"
 done
 ok "churn night: tooling survived via the KEEP list"
