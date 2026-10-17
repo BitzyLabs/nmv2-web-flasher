@@ -395,7 +395,11 @@ If you move the breakpoint, move it in **three** places: `MobileGate`'s
 **KEEP list** (our tooling, restored after every merge):
 `.bitzylabs-overlay/`, `scripts/apply-bitzylabs-branding.py`,
 `scripts/sync-upstream.sh`, `scripts/upstream-mirror-test.sh`,
-`.github/workflows/{nextjs,update-firmware,sync-upstream}.yml`.
+`.github/workflows/{nextjs,update-firmware,sync-upstream}.yml`, and —
+since the Oct 2026 dependency pins — `package.json` **and**
+`package-lock.json` as a pair (our versions win, and npm ci can never
+meet a lock that disagrees with its manifest; `patch_dependency_pins`
+plus two validate needles are the second net, §17.9).
 
 ### 9.2 When a sync breaks a chain (expect this eventually)
 
@@ -621,6 +625,17 @@ Condensed, so you know *why* things are the way they are:
    the nightly), while about half their commit volume is firmware-bot noise
    the patcher prunes right back out. Retire or downgrade the sync only if
    the nightlies start going red routinely.
+9. **Next.js stays on 13.5.x** (Oct 2026, Aikido scan, owner's call —
+   "let's not make it a project"). The scan's axios and workflow findings
+   were fixed outright; the Next advisories that remain all want 14 or 15.
+   They are accepted knowingly: this is a **static export on GitHub Pages**
+   — no Next server, no middleware, no SSR runtime in the deployment — and
+   most of those advisories describe attacks against exactly that absent
+   server. The pins are durable (KEEP pair + `patch_dependency_pins` +
+   validate needles, §9.1). Revisit **only** if the deployment shape ever
+   gains a server, or when upstream's own line makes 15.x a small step
+   rather than a migration. Note: the SAST/IaC engines were unavailable in
+   the scan environment, so `src/` has had secrets-coverage only.
 
 ---
 
