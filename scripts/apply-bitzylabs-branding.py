@@ -3678,6 +3678,18 @@ def patch_theme_ui() -> None:
         '            className="hidden h-8 w-auto object-contain dark:block"\n'
         "          />\n",
     )
+    # The dark wordmark's empty alt was a false economy: Bing's URL
+    # inspection counted it as the page's one missing alt text. Both
+    # halves now say the same words -- only one of the two is ever
+    # displayed, so assistive tech still meets exactly one name.
+    changed |= replace_if_present(
+        header,
+        '            alt=""\n'
+        '            aria-hidden="true"\n'
+        '            className="hidden h-8 w-auto object-contain dark:block"\n',
+        f'            alt="{BRAND}"\n'
+        '            className="hidden h-8 w-auto object-contain dark:block"\n',
+    )
     note(changed, "Header.tsx: theme switcher imported and rendered, wordmark per theme")
 
     changed = False
@@ -4682,6 +4694,11 @@ def validate() -> None:
     ):
         if needle not in header:
             problems.append(f"Header.tsx: {needle!r} missing ({what})")
+    if 'alt=""' in header:
+        problems.append(
+            "Header.tsx: an image ships an empty alt "
+            "(Bing counts it as missing alt text)"
+        )
     if "text-sm font-medium text-[var(--color-muted-warm)] transition-colors hover:text-[var(--color-bitzy)] md:hidden" in header:
         problems.append("Header.tsx: the bar still carries its own small-screen button")
     if "text-white/70" in header:

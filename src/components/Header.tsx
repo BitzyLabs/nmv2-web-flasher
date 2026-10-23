@@ -38,8 +38,7 @@ export default function Header({ onTogglePanel, panelOpen }: HeaderProps) {
           />
           <img
             src={`${basePath}/pictures/bitzylabs-logo-dark.png`}
-            alt=""
-            aria-hidden="true"
+            alt="Bitzy Labs"
             className="hidden h-8 w-auto object-contain dark:block"
           />
           <span className="brand-badge">Flasher</span>
