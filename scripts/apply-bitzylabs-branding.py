@@ -741,6 +741,24 @@ def patch_footer() -> None:
         "\n",
         "",
     )
+    # Upstream keeps one row per source they serve, and the array's
+    # contents are theirs to extend: the Open Source Badge arrived in
+    # Nov 2026 and the four-row form above stopped matching. Both forms
+    # trade to nothing (an empty replacement reads as already applied,
+    # so a tree wearing either one settles quietly), and the validation
+    # needle on FIRMWARE_LINKS is the net for the row after that.
+    changed |= replace_once(
+        path,
+        "const FIRMWARE_LINKS = [\n"
+        "  { label: 'Bitaxe', href: 'https://github.com/bitaxeorg/ESP-Miner' },\n"
+        "  { label: 'NerdQaxe & Octaxe', href: 'https://github.com/shufps/ESP-Miner-NerdQAxePlus' },\n"
+        "  { label: 'NerdMiner', href: 'https://github.com/BitMaker-hub/NerdMiner_v2' },\n"
+        "  { label: 'Seeder', href: 'https://github.com/BitMaker-hub/Seeder' },\n"
+        "  { label: 'Open Source Badge', href: 'https://github.com/BitMaker-hub/OpenSourceBadge' },\n"
+        "];\n"
+        "\n",
+        "",
+    )
     changed |= replace_once(
         path,
         "          <div>\n"
@@ -1321,9 +1339,14 @@ def patch_palette() -> None:
         path, "/* header and footer */", "/* the dark chrome: panels and pickers */"
     )
     # The muted of the store's light half, for text on the warm ground.
+    # The marker carries the light value, not the bare name: .dark
+    # spells the same variable with its own, so a merge that keeps only
+    # that half must not read as done. A literal, because the chain
+    # audit judges markers from this source -- keep it beside
+    # validation's needle if the value ever moves.
     changed |= inject_once(
         path,
-        "--color-muted-warm",
+        "--color-muted-warm: #6D6A64;",
         "  --color-muted-ink: #8A8A8F;\n",
         "  --color-muted-ink: #8A8A8F;\n"
         f"  --color-muted-warm: {STORE_MUTED};   /* muted text on a light surface */\n",
@@ -1506,11 +1529,13 @@ def patch_theme_schemes() -> None:
         changed |= replace_once(path, old, new)
     note(changed, "globals.css: :root -> the store's light scheme (the default)")
 
-    # The three tokens no component spells itself. Before the .dark block
-    # below, whose lines name them and would satisfy this marker early.
+    # The three tokens no component spells itself. The marker carries the
+    # light value: .dark spells the same names with dark ones and every
+    # component usage spells them through var(), so only this line says
+    # the injection happened.
     changed = inject_once(
         path,
-        "--color-panel",
+        "--color-panel: #FFFFFF;",
         "  --color-hairline-light: #E7E4DE;\n",
         "  --color-hairline-light: #E7E4DE;\n"
         "  /* What flips with the reader's theme. The names keep their light\n"
