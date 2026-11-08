@@ -464,7 +464,12 @@ bash scripts/sync-upstream.sh
 
 - **Deploy:** push to `main` → `nextjs.yml` builds and publishes GitHub
   Pages. No manual step. (Also triggers: firmware-bot completion, manual
-  dispatch.)
+  dispatch.) The CI build runs `npm run build`, which restamps
+  `public/sitemap.xml`'s `lastmod` from the deployed commit; local checks
+  use bare `npx next build` and skip that stamp on purpose — running the
+  stamped version locally leaves the file unstaged, and the sync refuses
+  a dirty tree at the door (commit or `git checkout -- public/sitemap.xml`
+  before a manual sync).
 - **Verify a deploy:** wait for the Actions run, then confirm the live HTML
   references new chunk hashes, e.g.
   `curl -s https://flasher.bitzylabs.com/ | grep -o '_next/static/chunks/[^"]*'`
