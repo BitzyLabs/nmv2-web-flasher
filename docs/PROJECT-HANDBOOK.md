@@ -387,7 +387,8 @@ If you move the breakpoint, move it in **three** places: `MobileGate`'s
 2. `scripts/sync-upstream.sh`: fetch `upstream/main`; if it's already an
    ancestor → `--check` and exit (quiet night, no empty merge commit);
    refuse a dirty tree; **merge with upstream winning same-line conflicts**
-   (`-X theirs` on upstream files); restore the **KEEP list** from the
+   (`-X theirs` on upstream files; delete/edit clashes settle by policy —
+   our deletions win, §9.2); restore the **KEEP list** from the
    pre-sync commit; run the patcher; validate + audit; build; push a
    fast-forward **merge commit** (never hard-reset `main` — it would rewrite
    history and be rejected).
@@ -415,6 +416,15 @@ validate fails. That's by design: upstream moved the text. Playbook:
    already wear either form.
 4. Run the ritual (§5.1), extend validate needles if the end state changed,
    commit script+tree together.
+
+**Delete/edit clashes no longer reach this playbook.** They used to stop the
+sync with "resolve it by hand" — and sat red for eleven nights (Oct 30 –
+Nov 8, 2026) because nobody did, while upstream advanced. The script now
+settles them itself: a path we deleted stays deleted (the pruner's call —
+it re-runs in the same sync), a path they deleted keeps our edited copy,
+and content still on both sides stops the sync with the paths named. What
+arrives here is only a real anchor break: upstream moved text a chain
+matches.
 
 ### 9.3 Doing a manual sync
 
@@ -636,6 +646,14 @@ Condensed, so you know *why* things are the way they are:
    gains a server, or when upstream's own line makes 15.x a small step
    rather than a migration. Note: the SAST/IaC engines were unavailable in
    the scan environment, so `src/` has had secrets-coverage only.
+10. **Sync conflicts resolve themselves, in the fork's direction** (Nov 2026,
+    after eleven red nights, Oct 30 – Nov 8). A modify/delete clash —
+    almost always our pruner meeting upstream's firmware bot on a device
+    the picker does not offer — no longer waits for a human: our deletions
+    win, their deletions lose (our edited copy stays), and content still on
+    both sides stops the sync loudly with the paths named. Validate and the
+    mirror harness still judge the end state; the direction only decides
+    who gets there without a night of red.
 
 ---
 

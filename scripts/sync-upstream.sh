@@ -17,6 +17,10 @@
 # edited the same line upstream wins outright (-X theirs), because our side is
 # regenerated from scratch immediately afterwards; keeping our stale copy of a
 # line we are about to overwrite would only be a conflict waiting to happen.
+# Where one side deleted a file the other edited there is no line to pick, so
+# -X theirs stops the merge; the resolution below settles those by policy too
+# -- the pruner's deletions win, their deletions lose to our edited copies --
+# which keeps firmware-bot nights hands-off.
 #
 # Our own tooling (the overlay, this script, the workflows) is not in upstream,
 # so it would otherwise be lost. It is restored from the pre-sync commit.
@@ -102,11 +106,51 @@ echo "==> Upstream is ${BEHIND} commit(s) ahead; we are ${AHEAD} commit(s) ahead
 echo "==> Merging ${UPSTREAM_REMOTE}/${UPSTREAM_BRANCH} (${UPSTREAM_SHA:0:12})"
 
 if ! git merge --no-edit -X theirs "$UPSTREAM_SHA"; then
-  git merge --abort 2>/dev/null || true
-  echo "==> Merge stopped on a conflict that -X theirs cannot settle," >&2
-  echo "    almost always a file one side deleted while the other edited it." >&2
-  echo "    Resolve it, commit the result, then re-run this script." >&2
-  exit 1
+  # -X theirs picks a winner per line, but there is no line to pick when
+  # one side deleted a file the other edited: the merge stops with those
+  # paths unmerged. That is the shape of every firmware-bot night -- the
+  # pruner dropped dead-device firmware (and releases.json), upstream's
+  # bot then touched those very files -- and eleven red nights (Oct 30 -
+  # Nov 8, 2026) proved that waiting for a human to re-run a script is
+  # not a plan. The direction is the fork's: a path we deleted stays
+  # deleted (the pruner's call, and it re-runs below anyway), a path they
+  # deleted keeps our edited copy, and content still on both sides --
+  # which -X theirs should have settled -- stops the sync with the paths
+  # named. Nothing here aborts the merge any more; it is finished below.
+  if ! git rev-parse --verify -q MERGE_HEAD >/dev/null; then
+    echo "==> The merge failed before leaving a merge to finish;" >&2
+    echo "    git's own message is above. Nothing was changed." >&2
+    exit 1
+  fi
+  settled=0
+  while IFS= read -r -d '' path; do
+    stages=" $(git ls-files -u -- "$path" | awk '{print $3}' | tr '\n' ' ') "
+    if [[ "$stages" != *" 2 "* ]]; then
+      # No stage 2: our side deleted it. Keep it gone.
+      git rm -f -- "$path" >/dev/null || true
+    elif [[ "$stages" != *" 3 "* ]]; then
+      # Stage 2 but no stage 3: they deleted a file we edited. Keep ours,
+      # restoring it first if the conflict left the worktree bare.
+      if [ -e "$path" ] || git checkout --ours -- "$path" 2>/dev/null; then
+        git add -- "$path" || true
+      fi
+    fi
+    # Stages 2 and 3 both present: content -X theirs did not settle.
+    # Leave it unmerged; the check below names it and stops the sync.
+    settled=$((settled + 1))
+  done < <(git diff --name-only -z --diff-filter=U)
+  if [ -n "$(git ls-files -u)" ]; then
+    echo "==> Conflicts this script will not settle (content on both sides):" >&2
+    git ls-files -u | awk -F'\t' '{split($1,a," "); print "    " $2 "  (stage " a[3] ")"}' >&2
+    echo "    Resolve them, commit the result, then re-run this script." >&2
+    exit 1
+  fi
+  echo "==> Settled ${settled} delete/edit conflict(s) (our deletions win); committing the merge"
+  git commit --no-edit >/dev/null || {
+    echo "==> Conflicts settled, but the merge commit failed;" >&2
+    echo "    run 'git status' and commit the merge by hand." >&2
+    exit 1
+  }
 fi
 
 echo "==> Restoring BitzyLabs tooling from ${SAVED:0:12}"
