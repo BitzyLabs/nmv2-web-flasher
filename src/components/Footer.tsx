@@ -3,16 +3,6 @@ import { X } from 'lucide-react';
 
 const basePath = '';
 
-// Where each firmware actually comes from. Saying so in the footer is the
-// cheapest form of honesty: this site only re-serves other people's builds.
-const FIRMWARE_LINKS = [
-  { label: 'Bitaxe', href: 'https://github.com/bitaxeorg/ESP-Miner' },
-  { label: 'NerdQaxe & Octaxe', href: 'https://github.com/shufps/ESP-Miner-NerdQAxePlus' },
-  { label: 'NerdMiner', href: 'https://github.com/BitMaker-hub/NerdMiner_v2' },
-  { label: 'Seeder', href: 'https://github.com/BitMaker-hub/Seeder' },
-  { label: 'Open Source Badge', href: 'https://github.com/BitMaker-hub/OpenSourceBadge' },
-];
-
 const SITE_LINKS = [
   { label: 'Shop', href: 'https://www.bitzylabs.com' },
 ];

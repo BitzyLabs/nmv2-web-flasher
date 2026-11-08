@@ -188,12 +188,12 @@ export default function BadgeWifi({ port: openPort, disabled }: Props) {
   };
 
   const field =
-    'w-full rounded-md border border-[var(--color-hairline)] bg-black/40 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-bitronics';
+    'w-full rounded-md border border-[var(--color-hairline)] bg-black/40 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-bitzy';
 
   return (
     <div className="mx-auto w-full max-w-md rounded-xl border border-[var(--color-hairline)] bg-[var(--color-surface)] p-5 text-left">
       <div className="flex items-center gap-2">
-        <Wifi className="h-4 w-4 text-bitronics" />
+        <Wifi className="h-4 w-4 text-bitzy" />
         <h2 className="text-sm font-semibold text-white">Already flashed? Just set its WiFi</h2>
       </div>
       <p className="mt-1.5 text-xs leading-relaxed text-white/50">

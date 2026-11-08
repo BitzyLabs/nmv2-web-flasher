@@ -26,6 +26,14 @@ import { Chip, chipFromEsptool } from '@/lib/boards';
 import BoardPicker from './BoardPicker';
 import BoardArt from './BoardArt';
 import DeviceIntro from './DeviceIntro';
+import DevBoardPanel from './bitzy/DevBoardPanel';
+import { isDevBoard, isStm32 } from '@/lib/bitzy/devboards';
+import {
+  describeDeviceId,
+  flashBluePillSwd,
+  openStlink,
+  type StlinkConnection,
+} from '@/lib/bitzy/stlink';
 import BadgeWifi from './BadgeWifi';
 
 import { Terminal } from '@xterm/xterm';
