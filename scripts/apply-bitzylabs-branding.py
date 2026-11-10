@@ -1179,6 +1179,19 @@ def patch_layout() -> None:
         "  },\n"
         "  icons: {",
     )
+    # Google's site-verification token rides the same open-door map, so
+    # one replace carries every tree state: fresh upstream (the block just
+    # injected above), the bing: shorthand (just migrated), and this
+    # fork's own map as it stands. Anchored on the Bing line followed by
+    # the map's close -- a Google line already sitting between them
+    # breaks that anchor, which is what keeps the leg quiet on a re-run.
+    changed |= replace_if_present(
+        path,
+        "      'msvalidate.01': 'B318F6CB35494283D623E8111AA11060',\n    },\n",
+        "      'msvalidate.01': 'B318F6CB35494283D623E8111AA11060',\n"
+        "      'google-site-verification': 'OfVxNcS_EyGCO8H2OsLPo04WJCauQP8IY-gD8twNAag',\n"
+        "    },\n",
+    )
     # The theme provider wraps the app, and upstream's layout never had it
     # -- a fresh sync brings the wrapper and its import back gone, so both
     # land again here. The import first, then the wrapper: the markers are
@@ -1209,7 +1222,7 @@ def patch_layout() -> None:
     )
     note(
         changed,
-        "layout.tsx: page title, description, theme-color, Bing verification, theme provider",
+        "layout.tsx: page title, description, theme-color, Bing and Google verification, theme provider",
     )
 
 
@@ -4420,6 +4433,10 @@ def validate() -> None:
         ("components/ClientThemeWrapper", "the provider is imported"),
         ("<ClientThemeWrapper>", "the app is wrapped in it"),
         ("'msvalidate.01': 'B318F6CB35494283D623E8111AA11060'", "Bing can verify the site"),
+        (
+            "'google-site-verification': 'OfVxNcS_EyGCO8H2OsLPo04WJCauQP8IY-gD8twNAag'",
+            "Google can verify the site",
+        ),
     ):
         if needle not in layout:
             problems.append(f"layout.tsx: {needle!r} missing ({what})")
