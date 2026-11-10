@@ -6,7 +6,7 @@
 import { execSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 
-const HOST = 'https://flasher.bitzylabs.com';
+const HOST = 'https://flasher.bitzylabs.au';
 
 let lastmod;
 try {

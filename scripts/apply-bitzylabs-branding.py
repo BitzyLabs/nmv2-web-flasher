@@ -81,7 +81,7 @@ STORE_LINE = "#E7E4DE"
 STORE_MUTED = "#6D6A64"
 
 SITE = "https://www.bitzylabs.com"
-DOMAIN = "flasher.bitzylabs.com"
+DOMAIN = "flasher.bitzylabs.au"
 BRAND = "Bitzy Labs"
 
 ASSETS = ROOT / ".bitzylabs-overlay" / "assets"
@@ -90,8 +90,18 @@ LOGO_LIGHT = "bitzylabs-logo-light.png"  # crimson mark + ink wordmark
 
 # Every string that must not survive into a deploy. #DB092A is this fork's
 # first crimson: the store's guide overrode it, so it is as dead as the
-# yellow was.
-FORBIDDEN = ("bitronics.store", "#ECD400", "#4A4200", "#7A6D00", "#DB092A")
+# yellow was. flasher.bitzylabs.com is the flasher's first host: the site
+# moved to flasher.bitzylabs.au in Nov 2026 and the old subdomain's DNS
+# record was deleted outright, so a link back through it is a dead end --
+# and validation, not memory, keeps it gone.
+FORBIDDEN = (
+    "bitronics.store",
+    "#ECD400",
+    "#4A4200",
+    "#7A6D00",
+    "#DB092A",
+    "flasher.bitzylabs.com",
+)
 
 # Any Bitronics URL, however it was written: subdomain, path, query. Anchored
 # on the domain rather than on surrounding code so upstream restructuring a
@@ -404,7 +414,16 @@ def patch_header() -> None:
     )
     changed |= replace_if_present(path, 'href="https://bitronics.store"', f'href="{SITE}"')
     # The logo is the way back to the flasher itself; the Shop entry in the
-    # nav array above is what points at the store.
+    # nav array above is what points at the store. The shop-form leg is how
+    # the link starts (the bitronics.store leg above lands it on the shop,
+    # and this repoints it at the flasher); the .com leg is this site's
+    # first host, so a tree from before the Nov 2026 move to .au migrates
+    # here instead of failing the anchor below.
+    changed |= replace_if_present(
+        path,
+        '          href="https://flasher.bitzylabs.com"\n',
+        f'          href="https://{DOMAIN}"\n',
+    )
     changed |= replace_once(
         path,
         '          href="https://www.bitzylabs.com"\n',
@@ -4411,13 +4430,13 @@ def validate() -> None:
     sitemap_path = ROOT / "public" / "sitemap.xml"
     if not sitemap_path.exists():
         problems.append("public/sitemap.xml: missing (the build script writes it)")
-    elif "<loc>https://flasher.bitzylabs.com/</loc>" not in sitemap_path.read_text():
+    elif f"<loc>https://{DOMAIN}/</loc>" not in sitemap_path.read_text():
         problems.append("public/sitemap.xml: the home URL is missing")
     robots_path = ROOT / "public" / "robots.txt"
     if not robots_path.exists():
         problems.append("public/robots.txt: missing")
     elif (
-        "Sitemap: https://flasher.bitzylabs.com/sitemap.xml"
+        f"Sitemap: https://{DOMAIN}/sitemap.xml"
         not in robots_path.read_text()
     ):
         problems.append("public/robots.txt: the sitemap pointer is missing")

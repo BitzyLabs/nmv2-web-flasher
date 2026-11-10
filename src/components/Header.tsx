@@ -26,7 +26,7 @@ export default function Header({ onTogglePanel, panelOpen }: HeaderProps) {
       <div className="mx-auto flex h-full w-full max-w-screen-xl items-center px-4 lg:px-6">
         {/* The Bitzy Labs + FLASHER lockup */}
         <a
-          href="https://flasher.bitzylabs.com"
+          href="https://flasher.bitzylabs.au"
           className="flex flex-1 items-center gap-3 transition-opacity hover:opacity-80"
         >
           {/* The bar follows the reader's theme, so the wordmark does

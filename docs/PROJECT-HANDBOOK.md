@@ -23,7 +23,8 @@ It is a **static single-page Next.js app** (no backend, no database, no API).
 Everything — the flashing protocols, the device catalog, the firmware
 manifests — ships in the JS bundle and `public/`.
 
-- **Live site:** https://flasher.bitzylabs.com (GitHub Pages)
+- **Live site:** https://flasher.bitzylabs.au (GitHub Pages; the old
+  flasher.bitzylabs.com subdomain is deleted outright, decision #11)
 - **This repo:** https://github.com/BitzyLabs/nmv2-web-flasher
 - **Upstream:** https://github.com/BitMaker-hub/bitronics-web-flasher
   (git remote is literally named `upstream`; we are a rebranded fork — see §4)
@@ -472,7 +473,7 @@ bash scripts/sync-upstream.sh
   before a manual sync).
 - **Verify a deploy:** wait for the Actions run, then confirm the live HTML
   references new chunk hashes, e.g.
-  `curl -s https://flasher.bitzylabs.com/ | grep -o '_next/static/chunks/[^"]*'`
+  `curl -s https://flasher.bitzylabs.au/ | grep -o '_next/static/chunks/[^"]*'`
   and grep a chunk for a string your change introduced
   (`"Ready To Flash"`, `"THIS FLASHER"`, `"bitzy-theme"`…).
 - **Roll back:** `git revert <sha> && git push` (Pages republishes). Never
@@ -659,6 +660,19 @@ Condensed, so you know *why* things are the way they are:
     both sides stops the sync loudly with the paths named. Validate and the
     mirror harness still judge the end state; the direction only decides
     who gets there without a night of red.
+11. **The flasher serves from flasher.bitzylabs.au** (Nov 2026, owner's
+    call). flasher.bitzylabs.com, the first host, is retired: its DNS
+    record was deleted outright — no redirect, the old host simply stops
+    resolving — while GitHub Pages' custom domain is the .au CNAME and
+    every URL the tree writes — the CNAME file, sitemap, robots, the
+    IndexNow payload, the wordmark's own href — names .au. Validation
+    carries the old host in its forbidden list, so flasher.bitzylabs.com
+    cannot ship again without a red build. Two invariants from the move:
+    the Pages site must stay `build_type: workflow` (the stale `gh-pages`
+    branch still holds a Sept 2025 build, and any legacy-mode rebuild
+    serves that instead of the CI artifact), and a custom-domain change
+    through the API must send `build_type=workflow` with it. The shop on
+    www.bitzylabs.com is a different site and did not move.
 
 ---
 

@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://flasher.bitzylabs.com/sitemap.xml
+Sitemap: https://flasher.bitzylabs.au/sitemap.xml

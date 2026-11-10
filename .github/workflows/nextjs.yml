@@ -48,7 +48,7 @@ jobs:
       # Every deploy is re-branded here rather than trusting the committed
       # tree: the firmware bot pushes straight to main with the repository's
       # token, and nothing stops a future sync from landing an unpatched
-      # commit. A build that reaches flasher.bitzylabs.com without that
+      # commit. A build that reaches flasher.bitzylabs.au without that
       # branding applied is the one failure this fork cannot have.
       - name: Apply BitzyLabs branding
         run: python3 scripts/apply-bitzylabs-branding.py
@@ -135,4 +135,4 @@ jobs:
           KEY=$(basename "$(ls public/*.txt | grep -v robots | head -n1)" .txt)
           curl -sS -X POST https://api.indexnow.org/indexnow \
             -H 'Content-Type: application/json; charset=utf-8' \
-            -d "{\"host\":\"flasher.bitzylabs.com\",\"key\":\"$KEY\",\"keyLocation\":\"https://flasher.bitzylabs.com/$KEY.txt\",\"urlList\":[\"https://flasher.bitzylabs.com/\"]}"
+            -d "{\"host\":\"flasher.bitzylabs.au\",\"key\":\"$KEY\",\"keyLocation\":\"https://flasher.bitzylabs.au/$KEY.txt\",\"urlList\":[\"https://flasher.bitzylabs.au/\"]}"
