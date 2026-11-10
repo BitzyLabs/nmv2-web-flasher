@@ -98,7 +98,7 @@ export const CATEGORIES: { id: DeviceCategory; title: string; blurb: string }[] 
 
 ];
 
-const SHOP = 'https://www.bitzylabs.com';
+const SHOP = 'https://www.bitzylabs.au';
 
 export const NERDMINER_ORIGINAL = 'NerdMinerV2 original board (T-Display-S3)';
 

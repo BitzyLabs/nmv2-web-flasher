@@ -28,7 +28,7 @@ manifests — ships in the JS bundle and `public/`.
 - **This repo:** https://github.com/BitzyLabs/nmv2-web-flasher
 - **Upstream:** https://github.com/BitMaker-hub/bitronics-web-flasher
   (git remote is literally named `upstream`; we are a rebranded fork — see §4)
-- **Owner / product:** Bitzy Labs (store: https://www.bitzylabs.com)
+- **Owner / product:** Bitzy Labs (store: https://www.bitzylabs.au)
 
 ### What a user does on the page
 
@@ -301,8 +301,9 @@ them is what `validate()` is built to enforce.
   crimson mark + **white** wordmark (for dark bars). Both ship; the header
   swaps them with `dark:hidden` / `dark:block`. Source of truth:
   `.bitzylabs-overlay/assets/`.
-- **The shop link** is `https://www.bitzylabs.com` (header nav, shop strip,
-  footer, device intros, mobile gate).
+- **The shop link** is `https://www.bitzylabs.au` (header nav, shop strip,
+  footer, device intros, mobile gate) — moved from www.bitzylabs.com in
+  Nov 2026, decision #11.
 - **Copy voice:** the site talks like a competent shopkeeper — plain,
   confident, a little funny ("Your phone is a lovely camera and a terrible
   flasher"). Dot-matrix (Doto) is used for flourish words, kickers, and the
@@ -671,8 +672,11 @@ Condensed, so you know *why* things are the way they are:
     the Pages site must stay `build_type: workflow` (the stale `gh-pages`
     branch still holds a Sept 2025 build, and any legacy-mode rebuild
     serves that instead of the CI artifact), and a custom-domain change
-    through the API must send `build_type=workflow` with it. The shop on
-    www.bitzylabs.com is a different site and did not move.
+    through the API must send `build_type=workflow` with it. The shop is a
+    different site; the flasher's links to it — nav, shop strip, footer,
+    buy buttons, the mobile gate — moved to www.bitzylabs.au in the same
+    month, and the URL sweep knows both shop hosts so an old form is
+    carried to whichever one SITE names.
 
 ---
 

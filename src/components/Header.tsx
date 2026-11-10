@@ -8,7 +8,7 @@ const basePath = '';
 // The store's own sections, so the flasher reads as another room of the same
 // house rather than a tool that happens to share a logo.
 const SITE_LINKS = [
-  { label: 'Shop', href: 'https://www.bitzylabs.com' },
+  { label: 'Shop', href: 'https://www.bitzylabs.au' },
 ];
 
 interface HeaderProps {

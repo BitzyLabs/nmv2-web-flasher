@@ -4,7 +4,7 @@ import { X } from 'lucide-react';
 const basePath = '';
 
 const SITE_LINKS = [
-  { label: 'Shop', href: 'https://www.bitzylabs.com' },
+  { label: 'Shop', href: 'https://www.bitzylabs.au' },
 ];
 
 function Notice({ title, body, onClose }: { title: string; body: string; onClose: () => void }) {

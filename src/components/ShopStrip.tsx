@@ -9,7 +9,7 @@ import { ArrowUpRight } from 'lucide-react';
 export default function ShopStrip() {
   return (
     <a
-      href="https://www.bitzylabs.com"
+      href="https://www.bitzylabs.au"
       target="_blank"
       rel="noopener noreferrer"
       className="group flex w-full items-center justify-center gap-2 border-[2px] border-[var(--color-bitzy)] bg-[var(--color-panel)] px-6 py-5 text-center text-[var(--color-bitzy)] transition-opacity hover:opacity-90"

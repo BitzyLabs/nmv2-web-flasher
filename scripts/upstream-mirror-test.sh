@@ -142,10 +142,10 @@ grep -q "TestBoard" src/lib/devices.ts && die "TestBoard survived the picker pol
 ok "churn night: new upstream device filtered out of devices.ts"
 [ ! -d public/firmware/testboard ] || die "unoffered firmware folder survived"
 ok "churn night: unoffered firmware folder pruned"
-grep -q "const SHOP = 'https://www.bitzylabs.com';" src/lib/devices.ts ||
+grep -q "const SHOP = 'https://www.bitzylabs.au';" src/lib/devices.ts ||
   die "SHOP sweep did not land after upstream reworded the path"
 ok "churn night: reworded SHOP swept to our domain"
-grep -q "const TRACKING = 'https://www.bitzylabs.com';" src/lib/devices.ts ||
+grep -q "const TRACKING = 'https://www.bitzylabs.au';" src/lib/devices.ts ||
   die "URL sweep missed a URL shape it has never seen"
 ok "churn night: unseen bitronics URL shape swept to our domain"
 grep -q '${SHOP}/' src/lib/devices.ts && die "collection slug suffix survived the sweep"

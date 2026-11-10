@@ -4,7 +4,7 @@ import { ArrowRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const basePath = '';
-const STORE_URL = 'https://www.bitzylabs.com';
+const STORE_URL = 'https://www.bitzylabs.au';
 const DISMISS_KEY = 'bitzy-gate-dismissed';
 
 /**

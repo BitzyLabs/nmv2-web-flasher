@@ -80,7 +80,7 @@ STORE_INK = "#222222"  # Bitzy Dark Grey
 STORE_LINE = "#E7E4DE"
 STORE_MUTED = "#6D6A64"
 
-SITE = "https://www.bitzylabs.com"
+SITE = "https://www.bitzylabs.au"
 DOMAIN = "flasher.bitzylabs.au"
 BRAND = "Bitzy Labs"
 
@@ -93,7 +93,10 @@ LOGO_LIGHT = "bitzylabs-logo-light.png"  # crimson mark + ink wordmark
 # yellow was. flasher.bitzylabs.com is the flasher's first host: the site
 # moved to flasher.bitzylabs.au in Nov 2026 and the old subdomain's DNS
 # record was deleted outright, so a link back through it is a dead end --
-# and validation, not memory, keeps it gone.
+# and validation, not memory, keeps it gone. www.bitzylabs.com is the shop
+# link's first host, left for www.bitzylabs.au in the same month: a shop
+# link is how a reader reaches the store, and the wrong shop host ships as
+# a dead link with the build's blessing.
 FORBIDDEN = (
     "bitronics.store",
     "#ECD400",
@@ -101,13 +104,17 @@ FORBIDDEN = (
     "#7A6D00",
     "#DB092A",
     "flasher.bitzylabs.com",
+    "www.bitzylabs.com",
 )
 
-# Any Bitronics URL, however it was written: subdomain, path, query. Anchored
-# on the domain rather than on surrounding code so upstream restructuring a
-# component cannot slip a new link past it.
+# Any URL the old brands wore, however it was written: subdomain, path,
+# query -- upstream's bitronics.store in every shape, plus this shop link's
+# previous host www.bitzylabs.com (Nov 2026: the flasher's shop links moved
+# to www.bitzylabs.au). Anchored on the domain rather than on surrounding
+# code so upstream restructuring a component cannot slip a new link past it.
 BITRONICS_URL = re.compile(
-    r"""https?://(?:[a-z0-9-]+\.)*bitronics\.store[^\s'"`)\\]*""", re.IGNORECASE
+    r"""https?://(?:(?:[a-z0-9-]+\.)*bitronics\.store|www\.bitzylabs\.com)[^\s'"`)\\]*""",
+    re.IGNORECASE,
 )
 
 # Whole word-marks only. Word boundaries matter: bitronics-web-flasher in
@@ -416,9 +423,17 @@ def patch_header() -> None:
     # The logo is the way back to the flasher itself; the Shop entry in the
     # nav array above is what points at the store. The shop-form leg is how
     # the link starts (the bitronics.store leg above lands it on the shop,
-    # and this repoints it at the flasher); the .com leg is this site's
-    # first host, so a tree from before the Nov 2026 move to .au migrates
-    # here instead of failing the anchor below.
+    # and this repoints it at the flasher) -- written against SITE itself so
+    # the shop domain the tree wears today is caught the moment the line
+    # above writes it, whatever domain the store moves to next. The two
+    # older forms are this site's own past hosts, so a tree from before the
+    # Nov 2026 move to .au migrates here instead of failing the anchor
+    # below.
+    changed |= replace_if_present(
+        path,
+        f'          href="{SITE}"\n',
+        f'          href="https://{DOMAIN}"\n',
+    )
     changed |= replace_if_present(
         path,
         '          href="https://flasher.bitzylabs.com"\n',
