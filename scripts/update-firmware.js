@@ -17,7 +17,13 @@ const VERSIONS_KEPT = 4;
 
 // The NerdMiner ships 32 boards in every release, so a single version of it
 // weighs as much as three of anything else. It keeps one fewer.
-const VERSIONS_KEPT_BY_DEVICE = { nerdminer: 3 };
+//
+// The two shufps folders joined it on 10 November. A version of nerdqaxe went
+// from 74 MB to 92 MB when the Gaia started shipping in it, and the pair now
+// costs about 111 MB per upstream release — enough that the published site
+// stopped syncing inside the deploy timeout. Three versions each buys back
+// 93 MB. Nobody has ever asked for the fourth one down.
+const VERSIONS_KEPT_BY_DEVICE = { nerdminer: 3, nerdqaxe: 3, nerdoctaxe: 3 };
 
 // Versions kept on purpose, however old they get, because somebody out there
 // needs that exact one. Gamma owners hitting a particular fault have to go
@@ -621,15 +627,62 @@ class FirmwareUpdater {
 
     // Prune every device, including the ones nobody automates, so a folder
     // filled in by hand cannot push the site back over the limit.
-    console.log(`\n🧹 Keeping the last ${VERSIONS_KEPT} versions of each device...`);
+    console.log(`\n🧹 Trimming each device to its own version limit...`);
     const root = 'public/firmware';
     for (const entry of await fs.readdir(root, { withFileTypes: true })) {
       if (entry.isDirectory()) await this.pruneOldVersions(path.join(root, entry.name));
     }
 
     await this.writeReleaseFeed();
+    await this.reportPayloadSize();
 
     console.log(`\n✨ Update check completed. Changes: ${this.hasChanges ? 'Yes' : 'No'}`);
+  }
+
+  /**
+   * What the published site weighs, said out loud on every run.
+   *
+   * With a fixed number of versions per device the total is bounded: a new
+   * release pushes out an old one. What moves it is a new board or a new
+   * device, because that lands in every version we keep. Nobody is going to
+   * remember to check, so this warns on the way up and stops the run before
+   * the 1 GB GitHub Pages allows turns into a deploy that cannot land.
+   */
+  async reportPayloadSize() {
+    const measure = async (dir) => {
+      let total = 0;
+      for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) total += await measure(full);
+        else total += (await fs.stat(full)).size;
+      }
+      return total;
+    };
+
+    const mb = Math.round((await measure('public')) / (1024 * 1024));
+    console.log(`\n📏 Published payload: ${mb} MB of the 1024 MB GitHub Pages allows`);
+
+    // Overridable so the thresholds can be exercised without building an
+    // 800 MB site to do it.
+    const warnAt = Number(process.env.PAYLOAD_WARN_MB) || 800;
+    const stopAt = Number(process.env.PAYLOAD_STOP_MB) || 950;
+
+    if (mb >= stopAt) {
+      console.log(
+        `::error::The published site is ${mb} MB. Pages refuses to publish past 1 GB, ` +
+          `so this run is stopping before it makes that worse. Drop a version from the ` +
+          `heaviest device in VERSIONS_KEPT_BY_DEVICE, or stop carrying a board nobody flashes.`,
+      );
+      throw new Error(`Published payload ${mb} MB is too close to the 1 GB limit`);
+    }
+
+    if (mb >= warnAt) {
+      console.log(
+        `::warning::The published site is ${mb} MB, past the ${warnAt} MB mark. It is bounded ` +
+          `by how many versions each device keeps, so something was added rather than ` +
+          `simply updated — a new board or a new device. Worth a look.`,
+      );
+    }
   }
 }
 
